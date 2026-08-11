@@ -1,0 +1,68 @@
+{
+  "name": "@flowstack-ui/theme",
+  "version": "0.1.0",
+  "description": "Serializable theme authoring and validation for Flowstack UI.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "keywords": [
+    "flowstack-ui",
+    "theme",
+    "design-tokens",
+    "design-system",
+    "brick-ui"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flowstack-ui/theme.git"
+  },
+  "bugs": {
+    "url": "https://github.com/flowstack-ui/theme/issues"
+  },
+  "homepage": "https://github.com/flowstack-ui/theme#readme",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "flowstack-theme": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "default": "./dist/schema.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "test:unit": "npm run build && node --test test/*.test.mjs",
+    "test:types": "npm run build && tsc -p test/types/tsconfig.json",
+    "test:processes": "node scripts/check-test-ports.mjs",
+    "verify:source": "node scripts/verify-source-contract.mjs",
+    "verify:repository-contract": "node scripts/verify-repository-contract.mjs",
+    "pack:check": "npm run build && node scripts/verify-package.mjs",
+    "check:focused": "node scripts/check-focused.mjs",
+    "check:repository": "npm run verify:repository-contract && npm run verify:source && npm run typecheck && npm run test:unit && npm run test:types && npm run pack:check && npm run test:processes",
+    "check:release": "npm run check:repository",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.7",
+    "typescript": "^5.9.3"
+  }
+}

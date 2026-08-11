@@ -1,0 +1,15 @@
+export {
+  THEME_DEFINITION_SCHEMA,
+  type JsonPrimitive,
+  type JsonValue,
+  type ThemeAppearance,
+  type ThemeAppearances,
+  type ThemeCompatibility,
+  type ThemeData,
+  type ThemeDefaultAppearance,
+  type ThemeDefinition,
+  type ThemeMetadata,
+  type ThemeValidationIssue,
+  type ThemeValidationIssueCode,
+  type ThemeValidationResult,
+} from "./types.js";
