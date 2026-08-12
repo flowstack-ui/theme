@@ -11,6 +11,7 @@ const sources = await Promise.all([
   "src/validation.ts",
   "src/compiler.ts",
   "src/artifacts.ts",
+  "src/colors-interchange.ts",
   "src/cli.ts",
 ].map((path) => readFile(resolve(path), "utf8")));
 const joined = sources.join("\n");
@@ -24,10 +25,11 @@ assert.equal(packageJson.bin["flowstack-theme"], "dist/cli.js");
 assert.equal(packageJson.exports["./schema"].default, "./dist/schema.js");
 assert.equal(packageJson.exports["./agents/manifest.json"], "./dist/agents/manifest.json");
 assert.equal(packageJson.scripts.prepare, "npm run build", "exact Git installs must build public artifacts");
-assert.doesNotMatch(joined, /from\s+["'](?:react|@flowstack-ui\/brick|@flowstack-ui\/atom|@brick-ui\/colors)/u);
+assert.doesNotMatch(joined, /from\s+["'](?:react|@flowstack-ui\/brick|@flowstack-ui\/atom|@flowstack-ui\/colors|@brick-ui\/colors)/u);
 assert.doesNotMatch(joined, /localStorage|document\.|window\.|createContext|use client/u);
 assert.match(joined, /flowstack\.theme\.v1/u);
 assert.match(joined, /flowstack\.theme-manifest\.v1/u);
 assert.match(joined, /flowstack\.theme-report\.v1/u);
+assert.match(joined, /flowstack\.colors-theme-scaffold\.v1/u);
 
 console.log("Verified public source boundary.");

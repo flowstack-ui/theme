@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- Zero-dependency file interchange for reviewed Colors candidates.
+- Explicit palette and semantic scaffold mapping with complete installed Brick
+  atomic-family expansion.
+- `flowstack-theme scaffold-colors` and deterministic scaffold reports.
+
 ## 0.1.0 - 2026-08-12
 
 ### Added

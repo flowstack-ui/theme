@@ -1,9 +1,12 @@
 import {
   BRICK_THEME_CONTRACT_SCHEMA,
+  COLORS_THEME_SCAFFOLD_SCHEMA,
   THEME_DEFINITION_SCHEMA,
   compileTheme,
   defineTheme,
+  scaffoldThemeFromColors,
   type BrickThemeContract,
+  type ColorsThemeScaffoldRequest,
   type ThemeCompilation,
   type ThemeDefinition,
 } from "../../dist/index.js";
@@ -51,6 +54,15 @@ const contract: BrickThemeContract = {
 };
 const compilation: ThemeCompilation = compileTheme(theme, contract);
 void compilation;
+
+const scaffoldRequest: ColorsThemeScaffoldRequest = {
+  $schema: COLORS_THEME_SCAFFOLD_SCHEMA,
+  theme,
+  palettes: { brand: "brand-source", neutral: "neutral-source" },
+  semantics: { accent: "brand", focus: "brand", neutral: "neutral" },
+};
+const scaffold = scaffoldThemeFromColors({}, scaffoldRequest, contract);
+void scaffold;
 
 defineTheme({
   $schema: THEME_DEFINITION_SCHEMA,

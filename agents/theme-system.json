@@ -8,6 +8,7 @@
   "purpose": "Author, compile, and integrate a project theme without changing Brick component meaning or moving application runtime ownership into Theme.",
   "decisionOrder": [
     "Identify brand and product colors as project palettes and roles before mapping any value to Brick.",
+    "If using Colors, review its candidate explicitly and scaffold selected families through the serialized file interchange.",
     "Install a released Brick version whose theme contract revision is supported by Theme.",
     "Map only UI meanings Brick owns into brick.light and brick.dark; keep charts, syntax, editorial, and campaign colors in project roles or namespaced extensions.",
     "Override a complete atomic Brick family or inherit that entire family from Brick defaults.",
@@ -24,6 +25,11 @@
       "id": "theme-installed-contract",
       "level": "must",
       "statement": "Compile against the theme-contract.json exported by the installed Brick package and do not maintain a copied semantic-token list."
+    },
+    {
+      "id": "theme-colors-interchange",
+      "level": "must",
+      "statement": "Treat Colors as optional serialized file input; never add a Colors runtime dependency or map an unreviewed candidate."
     },
     {
       "id": "theme-complete-family",
@@ -85,6 +91,7 @@
   },
   "validation": [
     "Validate the definition envelope before compiling.",
+    "When using Colors interchange, confirm the candidate review and scaffold report identify the intended families and semantic jobs.",
     "Compile against the exact installed Brick contract revision and review every diagnostic.",
     "Confirm theme.report.json contains one passing result for every declared pair and supported appearance.",
     "Verify generated artifacts are byte-stable and committed only when the application owns committed build output.",
@@ -94,6 +101,7 @@
   "related": [
     "docs/installation.md",
     "docs/authoring.md",
+    "docs/colors-interchange.md",
     "docs/fonts.md",
     "docs/appearances-and-portals.md",
     "docs/migration.md",

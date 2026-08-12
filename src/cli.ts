@@ -3,6 +3,11 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { compileThemeFiles, writeThemeArtifacts } from "./artifacts.js";
+import {
+  ColorsThemeScaffoldError,
+  scaffoldThemeFromColorsFiles,
+  writeColorsThemeScaffold,
+} from "./colors-interchange.js";
 import { ThemeCompilationError } from "./compiler.js";
 import { ThemeValidationError, validateThemeDefinition } from "./validation.js";
 
@@ -11,6 +16,7 @@ const help = `@flowstack-ui/theme
 Usage:
   flowstack-theme validate <theme.json>
   flowstack-theme compile <theme.json> --contract <theme-contract.json> --out-dir <directory>
+  flowstack-theme scaffold-colors <candidate.json> --mapping <scaffold.json> --contract <theme-contract.json> --out-dir <directory>
   flowstack-theme --help
 
 The CLI reads JSON definitions using flowstack.theme.v1. Compilation emits
@@ -38,6 +44,43 @@ async function main(args: readonly string[]): Promise<number> {
       const message = error instanceof ThemeCompilationError || error instanceof Error ? error.message : String(error);
       console.error(message);
       return error instanceof ThemeCompilationError || error instanceof ThemeValidationError ? 1 : 2;
+    }
+  }
+
+  if (args[0] === "scaffold-colors") {
+    const mappingIndex = args.indexOf("--mapping");
+    const contractIndex = args.indexOf("--contract");
+    const outputIndex = args.indexOf("--out-dir");
+    if (
+      args.length !== 8
+      || !args[1]
+      || mappingIndex < 0
+      || contractIndex < 0
+      || outputIndex < 0
+      || !args[mappingIndex + 1]
+      || !args[contractIndex + 1]
+      || !args[outputIndex + 1]
+    ) {
+      console.error(help);
+      return 2;
+    }
+    try {
+      const result = await scaffoldThemeFromColorsFiles(
+        args[1],
+        args[mappingIndex + 1],
+        args[contractIndex + 1],
+      );
+      await writeColorsThemeScaffold(result, args[outputIndex + 1]);
+      console.log(
+        `Scaffolded ${result.definition.metadata.id} theme to ${resolve(args[outputIndex + 1])}.`,
+      );
+      return 0;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(message);
+      return error instanceof ColorsThemeScaffoldError || error instanceof ThemeValidationError
+        ? 1
+        : 2;
     }
   }
 

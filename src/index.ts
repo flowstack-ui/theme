@@ -2,6 +2,12 @@ export { defineTheme } from "./define-theme.js";
 export { compileTheme, assertBrickThemeContract, ThemeCompilationError } from "./compiler.js";
 export { compileThemeFiles, loadBrickThemeContract, writeThemeArtifacts } from "./artifacts.js";
 export {
+  ColorsThemeScaffoldError,
+  scaffoldThemeFromColors,
+  scaffoldThemeFromColorsFiles,
+  writeColorsThemeScaffold,
+} from "./colors-interchange.js";
+export {
   assertThemeDefinition,
   isThemeDefinition,
   ThemeValidationError,

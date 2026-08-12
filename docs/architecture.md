@@ -51,6 +51,21 @@ under `--flowstack-theme-*`, never create new `--brick-*` meanings, and are
 also retained in the token artifact. Extension top-level keys are the
 discoverable namespaces recorded by the manifest.
 
+## Colors interchange
+
+Theme may read a reviewed serialized `flowstack.colors-candidate.v1` document
+as optional build input. It never imports Colors code and has no Colors runtime
+dependency. An explicit scaffold mapping assigns selected candidate families
+to project palette names and, separately, assigns compatible interface or
+neutral families to semantic Brick jobs.
+
+The scaffold writes exact candidate hex values beneath the reserved
+`palettes.colors` namespace and generates aliases for complete atomic families
+from the installed Brick contract. Decorative and otherwise extra families
+remain project palettes without being forced into Brick meaning. The result is
+an ordinary editable `flowstack.theme.v1` definition; compilation remains the
+authority for exact Brick compatibility and contrast.
+
 ## Generated artifacts
 
 - `theme.css` contains the static `flowstack.theme` layer and activation

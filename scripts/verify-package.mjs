@@ -40,6 +40,8 @@ try {
     "package/dist/cli.js",
     "package/dist/compiler.d.ts",
     "package/dist/compiler.js",
+    "package/dist/colors-interchange.d.ts",
+    "package/dist/colors-interchange.js",
     "package/dist/artifacts.d.ts",
     "package/dist/artifacts.js",
     "package/dist/index.d.ts",
@@ -53,6 +55,7 @@ try {
     "package/docs/appearances-and-portals.md",
     "package/docs/architecture.md",
     "package/docs/authoring.md",
+    "package/docs/colors-interchange.md",
     "package/docs/fonts.md",
     "package/docs/installation.md",
     "package/docs/migration.md",
@@ -70,9 +73,11 @@ try {
 import {
   THEME_DEFINITION_SCHEMA,
   BRICK_THEME_CONTRACT_SCHEMA,
+  COLORS_THEME_SCAFFOLD_SCHEMA,
   assertThemeDefinition,
   compileTheme,
   defineTheme,
+  scaffoldThemeFromColors,
   validateThemeDefinition,
 } from "@flowstack-ui/theme";
 import { THEME_DEFINITION_SCHEMA as SCHEMA_ENTRY } from "@flowstack-ui/theme/schema";
@@ -135,6 +140,34 @@ assertThemeDefinition(definition);
 if (!validateThemeDefinition(definition).valid) throw new Error("archive definition did not validate");
 const compilation = compileTheme(definition, contract);
 if (!compilation.css.includes("@layer flowstack.theme")) throw new Error("archive compilation failed");
+const color = (role, hex) => ({ role, srgb: { hex } });
+const scaffold = scaffoldThemeFromColors({
+  $schema: "flowstack.colors-candidate.v1",
+  status: "accepted",
+  review: { status: "accepted" },
+  families: [{
+    id: "brand-source",
+    profile: "interface",
+    status: "accepted",
+    appearances: { light: { roles: {
+      solid: color("solid", "#3157d5"),
+      onSolid: color("onSolid", "#ffffff"),
+    } } },
+  }],
+}, {
+  $schema: COLORS_THEME_SCAFFOLD_SCHEMA,
+  theme: {
+    $schema: THEME_DEFINITION_SCHEMA,
+    metadata: { id: "archive-scaffold", name: "Archive Scaffold" },
+    compatibility: { brick: "^0.1.0" },
+    appearances: { supported: ["light"], default: "light" },
+  },
+  palettes: { brand: "brand-source" },
+  semantics: { accent: "brand" },
+}, contract);
+if (compileTheme(scaffold.definition, contract).report.counts.brickOverridden !== 2) {
+  throw new Error("archive scaffold did not compile");
+}
 console.log(definition.metadata.id, compilation.report.counts.brickRequired);
 `);
 
@@ -143,6 +176,7 @@ console.log(definition.metadata.id, compilation.report.counts.brickRequired);
   assert.equal(consumerOutput, "archive-consumer 2");
   const help = run(process.execPath, [resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/cli.js"), "--help"], consumerDirectory);
   assert.match(help, /flowstack-theme validate/u);
+  assert.match(help, /flowstack-theme scaffold-colors/u);
 
   const installedPackage = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/package.json"), "utf8"));
   assert.equal(Object.keys(installedPackage.dependencies ?? {}).length, 0);

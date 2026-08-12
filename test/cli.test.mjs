@@ -12,7 +12,72 @@ test("CLI help describes validation and compilation", () => {
   assert.equal(result.status, 0);
   assert.match(result.stdout, /flowstack-theme validate/);
   assert.match(result.stdout, /flowstack-theme compile/);
+  assert.match(result.stdout, /flowstack-theme scaffold-colors/);
   assert.match(result.stdout, /theme\.manifest\.json/);
+});
+
+test("CLI scaffolds a reviewed Colors candidate into editable Theme JSON", () => {
+  const root = mkdtempSync(resolve(tmpdir(), "flowstack-theme-cli-scaffold-"));
+  try {
+    const candidate = resolve(root, "candidate.json");
+    const mapping = resolve(root, "mapping.json");
+    const contract = resolve(root, "contract.json");
+    const output = resolve(root, "scaffold");
+    const color = (role, hex) => ({ role, srgb: { hex } });
+    writeFileSync(candidate, JSON.stringify({
+      $schema: "flowstack.colors-candidate.v1",
+      status: "accepted",
+      review: { status: "accepted" },
+      families: [{
+        id: "campaign-source",
+        profile: "decorative",
+        status: "accepted",
+        appearances: {
+          light: { steps: [color("step-1", "#fff0ff"), color("step-2", "#ff00ff"), color("step-3", "#550055")] },
+        },
+      }],
+    }));
+    writeFileSync(mapping, JSON.stringify({
+      $schema: "flowstack.colors-theme-scaffold.v1",
+      theme: {
+        $schema: "flowstack.theme.v1",
+        metadata: { id: "cli-scaffolded", name: "CLI Scaffolded" },
+        compatibility: { brick: "^0.1.0" },
+        appearances: { supported: ["light"], default: "light" },
+      },
+      palettes: { campaign: "campaign-source" },
+    }));
+    writeFileSync(contract, JSON.stringify({
+      $schema: "flowstack.brick-theme-contract.v1",
+      contractVersion: 2,
+      package: { name: "@flowstack-ui/brick", version: "0.1.9" },
+      css: {
+        variablePrefix: "--brick-",
+        layerOrder: ["brick.tokens", "flowstack.theme", "brick.foundations"],
+        themeLayer: "flowstack.theme",
+        themeAttribute: "data-flowstack-theme",
+        appearanceAttribute: "data-brick-appearance",
+        appearanceValues: ["light", "dark"],
+      },
+      atomicColorFamilies: [],
+      contrast: { algorithm: "wcag2-relative-luminance", colorSpace: "srgb", pairs: [] },
+      componentThemeInputs: [],
+      tokens: [],
+    }));
+
+    const result = spawnSync(process.execPath, [
+      cli, "scaffold-colors", candidate,
+      "--mapping", mapping,
+      "--contract", contract,
+      "--out-dir", output,
+    ], { encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Scaffolded cli-scaffolded theme/u);
+    assert.equal(existsSync(resolve(output, "flowstack.theme.json")), true);
+    assert.equal(existsSync(resolve(output, "theme.scaffold.report.json")), true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("CLI compiles all four artifacts", () => {
