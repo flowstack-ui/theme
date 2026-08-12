@@ -15,3 +15,5 @@
 - `flowstack-theme compile` plus programmatic file loading and artifact writing.
 - Explicit `color-scheme` output for fixed, system, and nested appearance
   boundaries so native controls follow the compiled theme.
+- Build preparation for immutable Git-commit installs used by pre-release
+  qualification consumers.
