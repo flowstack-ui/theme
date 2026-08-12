@@ -1,4 +1,6 @@
 export { defineTheme } from "./define-theme.js";
+export { compileTheme, assertBrickThemeContract, ThemeCompilationError } from "./compiler.js";
+export { compileThemeFiles, loadBrickThemeContract, writeThemeArtifacts } from "./artifacts.js";
 export {
   assertThemeDefinition,
   isThemeDefinition,

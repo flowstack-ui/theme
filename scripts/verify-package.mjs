@@ -37,6 +37,10 @@ try {
     "package/README.md",
     "package/dist/cli.d.ts",
     "package/dist/cli.js",
+    "package/dist/compiler.d.ts",
+    "package/dist/compiler.js",
+    "package/dist/artifacts.d.ts",
+    "package/dist/artifacts.js",
     "package/dist/index.d.ts",
     "package/dist/index.js",
     "package/dist/schema.d.ts",
@@ -52,7 +56,9 @@ try {
   await writeFile(resolve(consumerDirectory, "index.mjs"), `
 import {
   THEME_DEFINITION_SCHEMA,
+  BRICK_THEME_CONTRACT_SCHEMA,
   assertThemeDefinition,
+  compileTheme,
   defineTheme,
   validateThemeDefinition,
 } from "@flowstack-ui/theme";
@@ -66,15 +72,41 @@ const definition = defineTheme({
   palettes: { brand: { primary: "#3157d5", secondary: "#13a8b5", warmth: "#e97824" } },
 });
 
+const contract = {
+  $schema: BRICK_THEME_CONTRACT_SCHEMA,
+  contractVersion: 1,
+  package: { name: "@flowstack-ui/brick", version: "0.1.6" },
+  css: {
+    variablePrefix: "--brick-",
+    layerOrder: ["brick.tokens", "flowstack.theme", "brick.foundations"],
+    themeLayer: "flowstack.theme",
+    themeAttribute: "data-flowstack-theme",
+    appearanceAttribute: "data-brick-appearance",
+    appearanceValues: ["light", "dark"],
+  },
+  atomicColorFamilies: [{ id: "accent", tokens: ["--brick-color-accent-solid"] }],
+  componentThemeInputs: [],
+  tokens: [{
+    name: "--brick-color-accent-solid",
+    classification: "required",
+    type: "color",
+    appearance: "light-and-dark",
+    defaults: { light: "#3157d5", dark: "#6683e8" },
+    tokenPaths: { light: "semantic.light.color.accent.solid", dark: "semantic.dark.color.accent.solid" },
+  }],
+};
+
 if (SCHEMA_ENTRY !== THEME_DEFINITION_SCHEMA) throw new Error("schema subpath mismatch");
 assertThemeDefinition(definition);
 if (!validateThemeDefinition(definition).valid) throw new Error("archive definition did not validate");
-console.log(definition.metadata.id);
+const compilation = compileTheme(definition, contract);
+if (!compilation.css.includes("@layer flowstack.theme")) throw new Error("archive compilation failed");
+console.log(definition.metadata.id, compilation.report.counts.brickRequired);
 `);
 
   run("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund", archive], consumerDirectory);
   const consumerOutput = run(process.execPath, ["index.mjs"], consumerDirectory).trim();
-  assert.equal(consumerOutput, "archive-consumer");
+  assert.equal(consumerOutput, "archive-consumer 1");
   const help = run(process.execPath, [resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/cli.js"), "--help"], consumerDirectory);
   assert.match(help, /flowstack-theme validate/u);
 

@@ -1,0 +1,149 @@
+import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+import test from "node:test";
+
+import {
+  BRICK_THEME_CONTRACT_SCHEMA,
+  THEME_DEFINITION_SCHEMA,
+  ThemeCompilationError,
+  compileTheme,
+  writeThemeArtifacts,
+} from "../dist/index.js";
+
+function token(name, classification, type, light, dark, path, appearance = "light-and-dark") {
+  return {
+    name,
+    classification,
+    type,
+    appearance,
+    defaults: { light, dark },
+    tokenPaths: { light: `semantic.light.${path}`, dark: `semantic.dark.${path}` },
+  };
+}
+
+function contract() {
+  return {
+    $schema: BRICK_THEME_CONTRACT_SCHEMA,
+    contractVersion: 1,
+    package: { name: "@flowstack-ui/brick", version: "0.1.6" },
+    css: {
+      variablePrefix: "--brick-",
+      layerOrder: ["brick.tokens", "flowstack.theme", "brick.foundations"],
+      themeLayer: "flowstack.theme",
+      themeAttribute: "data-flowstack-theme",
+      appearanceAttribute: "data-brick-appearance",
+      appearanceValues: ["light", "dark"],
+    },
+    atomicColorFamilies: [{ id: "accent", tokens: ["--brick-color-accent-solid", "--brick-color-accent-on-solid"] }],
+    componentThemeInputs: [{ name: "--brick-drawer-radius", type: "dimension", fallback: "--brick-radius-overlay", supportedRange: "non-negative CSS <length>", component: "drawer" }],
+    tokens: [
+      token("--brick-color-accent-solid", "required", "color", "#554fd8", "#7772ee", "color.accent.solid"),
+      token("--brick-color-accent-on-solid", "required", "color", "#ffffff", "#111111", "color.accent.on-solid"),
+      token("--brick-radius-overlay", "derived", "dimension", "0.75rem", "0.75rem", "radius.overlay", "invariant"),
+    ],
+  };
+}
+
+function definition() {
+  return {
+    $schema: THEME_DEFINITION_SCHEMA,
+    metadata: { id: "acme", name: "Acme" },
+    compatibility: { brick: "^0.1.0" },
+    appearances: { supported: ["light", "dark"], default: "system" },
+    palettes: { brand: { blue: "#1261a0", orange: "#f27b22" } },
+    roles: { brandPrimary: "{palettes.brand.blue}", promotional: "{palettes.brand.orange}" },
+    brick: {
+      light: { color: { accent: { solid: "{roles.brandPrimary}", "on-solid": "#ffffff" } } },
+      dark: { color: { accent: { solid: "#68b5f0", "on-solid": "#081521" } } },
+    },
+    foundations: { radius: { overlay: "1rem" } },
+    components: { drawer: { radius: "1.25rem" } },
+    extensions: { charts: { revenue: "{roles.promotional}" } },
+    requirements: { fonts: [{ family: "Acme Sans", source: "application" }] },
+    guidance: { intent: "Clear product UI" },
+  };
+}
+
+test("compiler resolves aliases and emits complete deterministic dual-appearance artifacts", async () => {
+  const first = compileTheme(definition(), contract());
+  const second = compileTheme(definition(), contract());
+  assert.deepEqual(first, second);
+  assert.match(first.css, /^@layer flowstack\.theme/u);
+  assert.match(first.css, /prefers-color-scheme: dark/u);
+  assert.match(first.css, /--brick-color-accent-solid: #1261a0/u);
+  assert.match(first.css, /--flowstack-theme-roles-promotional: #f27b22/u);
+  assert.match(first.css, /--flowstack-theme-extensions-charts-revenue: #f27b22/u);
+  assert.equal(first.tokens.roles.brandPrimary.$value, "#1261a0");
+  assert.equal(first.tokens.brick.dark.color.accent.solid.$value, "#68b5f0");
+  assert.deepEqual(first.manifest.extensionNamespaces, ["charts"]);
+  assert.deepEqual(first.manifest.requirements.fonts, [{ family: "Acme Sans", source: "application" }]);
+  assert.equal(first.report.counts.brickOverridden, 4);
+  assert.equal(first.report.counts.componentInputs, 1);
+
+  const output = await mkdtemp(resolve(tmpdir(), "flowstack-theme-artifacts-"));
+  try {
+    await writeThemeArtifacts(first, output);
+    assert.equal(await readFile(resolve(output, "theme.css"), "utf8"), first.css);
+    for (const name of ["theme.tokens.json", "theme.manifest.json", "theme.report.json"]) {
+      assert.match(await readFile(resolve(output, name), "utf8"), /\n$/u);
+    }
+  } finally {
+    await rm(output, { recursive: true, force: true });
+  }
+});
+
+test("fixed-light and fixed-dark themes use their selected complete map without system CSS", () => {
+  for (const appearance of ["light", "dark"]) {
+    const input = definition();
+    input.appearances = { supported: [appearance], default: appearance };
+    delete input.brick[appearance === "light" ? "dark" : "light"];
+    const result = compileTheme(input, contract());
+    assert.doesNotMatch(result.css, /prefers-color-scheme/u);
+    assert.match(result.css, new RegExp(`data-brick-appearance="${appearance}"`, "u"));
+    assert.equal(result.report.counts.brickRequired, 2);
+  }
+});
+
+test("sparse definitions inherit complete Brick defaults", () => {
+  const input = definition();
+  delete input.brick;
+  const result = compileTheme(input, contract());
+  assert.equal(result.report.counts.brickInherited, 4);
+  assert.match(result.css, /--brick-color-accent-solid: #554fd8/u);
+  assert.match(result.css, /--brick-color-accent-solid: #7772ee/u);
+});
+
+test("partial atomic families, unknown inputs, invalid values, aliases, and versions fail clearly", () => {
+  const partial = definition();
+  delete partial.brick.light.color.accent["on-solid"];
+  assert.throws(() => compileTheme(partial, contract()), (error) => error instanceof ThemeCompilationError && error.issues.some(({ code }) => code === "incomplete-family"));
+
+  const unknown = definition();
+  unknown.components.button = { glow: "1rem" };
+  assert.throws(() => compileTheme(unknown, contract()), (error) => error.issues.some(({ code }) => code === "unsupported-component-input"));
+
+  const invalid = definition();
+  invalid.components.drawer.radius = "red; color: blue";
+  assert.throws(() => compileTheme(invalid, contract()), (error) => error.issues.some(({ code }) => code === "invalid-token-value"));
+
+  const negative = definition();
+  negative.components.drawer.radius = "-1rem";
+  assert.throws(() => compileTheme(negative, contract()), (error) => error.issues.some(({ code }) => code === "invalid-token-value"));
+
+  const circular = definition();
+  circular.roles.a = "{roles.b}";
+  circular.roles.b = "{roles.a}";
+  assert.throws(() => compileTheme(circular, contract()), (error) => error.issues.some(({ code }) => code === "alias-cycle"));
+
+  const incompatible = definition();
+  incompatible.compatibility.brick = "^2.0.0";
+  assert.throws(() => compileTheme(incompatible, contract()), (error) => error.issues.some(({ code }) => code === "incompatible-brick"));
+});
+
+test("project roles remain project variables and never create Brick color names", () => {
+  const result = compileTheme(definition(), contract());
+  assert.match(result.css, /--flowstack-theme-roles-promotional/u);
+  assert.doesNotMatch(result.css, /--brick-color-promotional/u);
+});

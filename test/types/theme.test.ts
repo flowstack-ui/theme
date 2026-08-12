@@ -1,6 +1,10 @@
 import {
+  BRICK_THEME_CONTRACT_SCHEMA,
   THEME_DEFINITION_SCHEMA,
+  compileTheme,
   defineTheme,
+  type BrickThemeContract,
+  type ThemeCompilation,
   type ThemeDefinition,
 } from "../../dist/index.js";
 
@@ -27,6 +31,25 @@ void id;
 
 const definition: ThemeDefinition = theme;
 void definition;
+
+const contract: BrickThemeContract = {
+  $schema: BRICK_THEME_CONTRACT_SCHEMA,
+  contractVersion: 1,
+  package: { name: "@flowstack-ui/brick", version: "0.1.6" },
+  css: {
+    variablePrefix: "--brick-",
+    layerOrder: ["brick.tokens", "flowstack.theme", "brick.foundations"],
+    themeLayer: "flowstack.theme",
+    themeAttribute: "data-flowstack-theme",
+    appearanceAttribute: "data-brick-appearance",
+    appearanceValues: ["light", "dark"],
+  },
+  atomicColorFamilies: [],
+  componentThemeInputs: [],
+  tokens: [],
+};
+const compilation: ThemeCompilation = compileTheme(theme, contract);
+void compilation;
 
 defineTheme({
   $schema: THEME_DEFINITION_SCHEMA,

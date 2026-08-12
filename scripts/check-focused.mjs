@@ -11,11 +11,15 @@ const commands = {
     ["npm", ["run", "build"]],
     [process.execPath, ["--test", "test/cli.test.mjs"]],
   ],
+  compiler: [
+    ["npm", ["run", "build"]],
+    [process.execPath, ["--test", "test/compiler.test.mjs"]],
+  ],
   all: [["npm", ["run", "test:unit"]]],
 };
 
 if (!(owner in commands)) {
-  console.error(`Unknown focused owner "${owner}". Use definition, validation, cli, or all.`);
+  console.error(`Unknown focused owner "${owner}". Use definition, validation, compiler, cli, or all.`);
   process.exit(1);
 }
 

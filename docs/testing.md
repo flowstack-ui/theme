@@ -5,6 +5,7 @@ This repository implements focused, repository, and release verification.
 ```bash
 npm run check:focused -- definition
 npm run check:focused -- validation
+npm run check:focused -- compiler
 npm run check:focused -- cli
 npm run check:repository
 npm run check:release
@@ -14,6 +15,9 @@ npm run check:release
 
 - `definition` builds the package and compiles public type fixtures.
 - `validation` builds the package and runs structural validation tests.
+- `compiler` covers aliases, defaults, atomic families, fixed and dual
+  appearances, component inputs, project roles, artifact writes, deterministic
+  output, and failure diagnostics.
 - `cli` builds the package and runs CLI process tests.
 - `all` runs every focused package test.
 
@@ -27,9 +31,10 @@ that no automated-test port is registered or occupied.
 
 ## Release boundary
 
-The bootstrap release gate equals the repository gate because this package has
-no browser or server surface. Later CSS compilation and visual qualification
-will expand release evidence without weakening the exact-archive consumer.
+The release gate equals the repository gate because the compiler has no browser
+or server surface. Browser qualification of Brick appearance boundaries belongs
+to the cross-repository Theme qualification batch and does not weaken this
+package's exact-archive consumer.
 
 Human review remains responsible for deciding whether public schema meaning is
 appropriately stable. Automated structural success cannot approve product
