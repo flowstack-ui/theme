@@ -72,6 +72,8 @@ test("compiler resolves aliases and emits complete deterministic dual-appearance
   assert.deepEqual(first, second);
   assert.match(first.css, /^@layer flowstack\.theme/u);
   assert.match(first.css, /prefers-color-scheme: dark/u);
+  assert.match(first.css, /color-scheme: light dark/u);
+  assert.match(first.css, /data-brick-appearance="dark"[\s\S]*color-scheme: dark/u);
   assert.match(first.css, /--brick-color-accent-solid: #1261a0/u);
   assert.match(first.css, /--flowstack-theme-roles-promotional: #f27b22/u);
   assert.match(first.css, /--flowstack-theme-extensions-charts-revenue: #f27b22/u);
@@ -101,6 +103,7 @@ test("fixed-light and fixed-dark themes use their selected complete map without 
     delete input.brick[appearance === "light" ? "dark" : "light"];
     const result = compileTheme(input, contract());
     assert.doesNotMatch(result.css, /prefers-color-scheme/u);
+    assert.match(result.css, new RegExp(`color-scheme: ${appearance}`, "u"));
     assert.match(result.css, new RegExp(`data-brick-appearance="${appearance}"`, "u"));
     assert.equal(result.report.counts.brickRequired, 2);
   }
