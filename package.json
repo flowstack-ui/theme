@@ -59,6 +59,7 @@
     "check:focused": "node scripts/check-focused.mjs",
     "check:repository": "npm run verify:repository-contract && npm run verify:source && npm run typecheck && npm run test:unit && npm run test:types && npm run pack:check && npm run test:processes",
     "check:release": "npm run check:repository",
+    "prepare": "npm run build",
     "prepack": "npm run build"
   },
   "devDependencies": {

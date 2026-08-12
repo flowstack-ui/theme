@@ -29,6 +29,14 @@ loading, and application preference persistence are outside this release.
 npm install --save-dev @flowstack-ui/theme
 ```
 
+Before the first registry release, qualification consumers may install a full
+immutable Git commit. Exact Git installs run the package build and must pin the
+complete commit rather than a branch:
+
+```bash
+npm install --save-dev "github:flowstack-ui/theme#<full-commit>"
+```
+
 ## Authoring
 
 Create `flowstack.theme.ts`:
