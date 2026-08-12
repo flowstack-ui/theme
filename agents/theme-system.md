@@ -9,16 +9,18 @@ meaning or moving application runtime ownership into Theme.
 
 1. Identify brand and product colors as project palettes and roles before
    mapping any value to Brick.
-2. Install a released Brick version whose theme contract revision is supported
+2. If using Colors, review its candidate explicitly and scaffold selected
+   families through the serialized file interchange.
+3. Install a released Brick version whose theme contract revision is supported
    by Theme.
-3. Map only UI meanings Brick owns into `brick.light` and `brick.dark`. Keep
+4. Map only UI meanings Brick owns into `brick.light` and `brick.dark`. Keep
    charts, syntax, editorial, and campaign colors in project roles or
    namespaced extensions.
-4. Override a complete atomic Brick family or inherit that entire family from
+5. Override a complete atomic Brick family or inherit that entire family from
    Brick defaults.
-5. Compile at build time, review the contrast report and static artifacts, and
+6. Compile at build time, review the contrast report and static artifacts, and
    ship the CSS rather than the compiler.
-6. Let the application own activation, saved preference, fonts, assets,
+7. Let the application own activation, saved preference, fonts, assets,
    portals, and first-paint behavior.
 
 ## Rules
@@ -26,6 +28,8 @@ meaning or moving application runtime ownership into Theme.
 - **MUST:** Keep definitions JSON-compatible and deterministic.
 - **MUST:** Read the installed Brick package's contract instead of copying its
   token inventory.
+- **MUST:** Treat Colors as optional file input; never add a Colors runtime
+  dependency or map an unreviewed candidate.
 - **MUST:** Override complete atomic color families.
 - **MUST:** Map colors by semantic meaning, never merely by hue.
 - **MUST:** Keep unlimited non-Brick colors in palettes, roles, or namespaced
@@ -51,6 +55,8 @@ meaning or moving application runtime ownership into Theme.
 ## Validation checklist
 
 - Validate the definition envelope before compiling.
+- When using Colors interchange, confirm the candidate review and scaffold
+  report identify the intended families and semantic jobs.
 - Compile against the exact installed Brick contract and review every
   diagnostic.
 - Confirm the report contains a passing result for every declared pair and

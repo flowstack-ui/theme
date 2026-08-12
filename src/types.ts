@@ -66,6 +66,9 @@ export interface ThemeValidationResult {
 export const BRICK_THEME_CONTRACT_SCHEMA = "flowstack.brick-theme-contract.v1" as const;
 export const THEME_MANIFEST_SCHEMA = "flowstack.theme-manifest.v1" as const;
 export const THEME_REPORT_SCHEMA = "flowstack.theme-report.v1" as const;
+export const COLORS_CANDIDATE_SCHEMA = "flowstack.colors-candidate.v1" as const;
+export const COLORS_THEME_SCAFFOLD_SCHEMA = "flowstack.colors-theme-scaffold.v1" as const;
+export const COLORS_THEME_SCAFFOLD_REPORT_SCHEMA = "flowstack.colors-theme-scaffold-report.v1" as const;
 
 export type BrickTokenClassification =
   | "required"
@@ -233,4 +236,75 @@ export interface ThemeCompilationIssue {
   readonly code: ThemeCompilationIssueCode;
   readonly path: string;
   readonly message: string;
+}
+
+export type ColorsPaletteProfile = "interface" | "neutral" | "decorative";
+
+export type ColorsThemeSemanticTarget =
+  | "neutral"
+  | "accent"
+  | "focus"
+  | "danger"
+  | "info"
+  | "success"
+  | "warning";
+
+export interface ColorsThemeScaffoldRequest {
+  readonly $schema: typeof COLORS_THEME_SCAFFOLD_SCHEMA;
+  readonly theme: ThemeDefinition;
+  readonly palettes: Readonly<Record<string, string>>;
+  readonly semantics?: Readonly<
+    Partial<Record<ColorsThemeSemanticTarget, string>>
+  >;
+}
+
+export type ColorsThemeScaffoldIssueCode =
+  | "candidate-not-accepted"
+  | "candidate-not-reviewed"
+  | "duplicate-family"
+  | "incompatible-profile"
+  | "invalid-candidate"
+  | "invalid-mapping"
+  | "missing-appearance"
+  | "missing-family"
+  | "missing-role"
+  | "naming-collision"
+  | "unknown-palette"
+  | "unsupported-contract-family";
+
+export interface ColorsThemeScaffoldIssue {
+  readonly code: ColorsThemeScaffoldIssueCode;
+  readonly path: string;
+  readonly message: string;
+}
+
+export interface ColorsThemeScaffoldPaletteReport {
+  readonly palette: string;
+  readonly family: string;
+  readonly profile: ColorsPaletteProfile;
+  readonly importedValues: number;
+}
+
+export interface ColorsThemeScaffoldReport {
+  readonly $schema: typeof COLORS_THEME_SCAFFOLD_REPORT_SCHEMA;
+  readonly candidate: Readonly<{
+    schema: typeof COLORS_CANDIDATE_SCHEMA;
+    review: "accepted" | "edited";
+  }>;
+  readonly themeId: string;
+  readonly brickVersion: string;
+  readonly palettes: readonly ColorsThemeScaffoldPaletteReport[];
+  readonly semantics: Readonly<
+    Partial<Record<ColorsThemeSemanticTarget, string>>
+  >;
+  readonly counts: Readonly<{
+    importedValues: number;
+    mappedBrickTokens: number;
+  }>;
+  readonly warnings: readonly string[];
+}
+
+export interface ColorsThemeScaffoldResult {
+  readonly definition: ThemeDefinition;
+  readonly report: ColorsThemeScaffoldReport;
 }

@@ -18,12 +18,14 @@ The package provides:
 - build-time WCAG 2 contrast validation for Brick-declared semantic color
   pairs in every supported appearance;
 - byte-stable CSS, DTCG token, manifest, and report artifacts;
-- JSON validation and compilation CLI commands;
+- JSON validation, Colors-candidate scaffolding, and compilation CLI commands;
 - package and exact-archive consumer verification; and
 - a zero-runtime-dependency, exact-archive consumer boundary.
 
-Colors generation, presets, React providers, runtime scope helpers, font
-loading, and application preference persistence are outside this release.
+Colors generation itself, presets, React providers, runtime scope helpers,
+font loading, and application preference persistence are outside this release.
+Theme can consume a reviewed serialized Colors candidate without importing or
+depending on the Colors package.
 
 ## Installation
 
@@ -143,6 +145,24 @@ TypeScript configuration files.
 The same build flow is available through `compileTheme`, `compileThemeFiles`,
 and `writeThemeArtifacts`.
 
+## Colors candidate scaffold
+
+After generating and reviewing a `flowstack.colors-candidate.v1` document, use
+a small mapping file to select project palette names and semantic jobs. Theme
+imports every selected value, expands complete Brick atomic families from the
+installed contract, and emits an ordinary editable `flowstack.theme.v1` file:
+
+```bash
+flowstack-theme scaffold-colors ./colors.candidate.json \
+  --mapping ./colors.theme-scaffold.json \
+  --contract ./node_modules/@flowstack-ui/brick/dist/theme-contract.json \
+  --out-dir ./theme
+```
+
+The output is `flowstack.theme.json` plus `theme.scaffold.report.json`. Review
+or edit the Theme JSON, then compile it normally. See
+[Colors interchange](docs/colors-interchange.md) for the mapping contract.
+
 ## Development
 
 Use Node 22 and npm:
@@ -158,6 +178,7 @@ See [architecture](docs/architecture.md) and [testing](docs/testing.md).
 Public guides cover [installation](docs/installation.md),
 [authoring](docs/authoring.md), [fonts](docs/fonts.md),
 [appearances and portals](docs/appearances-and-portals.md),
+[Colors interchange](docs/colors-interchange.md),
 [migration](docs/migration.md), [troubleshooting](docs/troubleshooting.md),
 and [Agent Knowledge](docs/agent-knowledge.md).
 

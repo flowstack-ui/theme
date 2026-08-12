@@ -6,6 +6,7 @@ This repository implements focused, repository, and release verification.
 npm run check:focused -- definition
 npm run check:focused -- validation
 npm run check:focused -- compiler
+npm run check:focused -- interchange
 npm run check:focused -- cli
 npm run check:repository
 npm run check:release
@@ -18,6 +19,9 @@ npm run check:release
 - `compiler` covers aliases, defaults, atomic families, fixed and dual
   appearances, component inputs, project roles, artifact writes, deterministic
   output, declared semantic contrast pairs, and failure diagnostics.
+- `interchange` covers reviewed Colors candidate ingestion, project palette
+  preservation, semantic-profile compatibility, complete Brick-family
+  expansion, ordinary Theme compilation, and fail-closed diagnostics.
 - `cli` builds the package and runs CLI process tests.
 - `all` runs every focused package test.
 
