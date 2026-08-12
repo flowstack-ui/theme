@@ -72,7 +72,13 @@ export type BrickTokenClassification =
   | "derived"
   | "component-input"
   | "optional-extension"
-  | "internal";
+  | "internal"
+  | "deprecated";
+
+export interface BrickTokenDeprecation {
+  readonly replacement: string;
+  readonly message?: string;
+}
 
 export interface BrickContractToken {
   readonly name: string;
@@ -82,6 +88,7 @@ export interface BrickContractToken {
   readonly defaults?: Readonly<Partial<Record<ThemeAppearance, string>>>;
   readonly tokenPaths?: Readonly<Partial<Record<ThemeAppearance, string>>>;
   readonly component?: string;
+  readonly deprecated?: BrickTokenDeprecation;
 }
 
 export interface BrickAtomicColorFamily {
@@ -209,6 +216,7 @@ export interface ThemeCompilation {
 
 export type ThemeCompilationIssueCode =
   | "alias-cycle"
+  | "deprecated-token"
   | "incompatible-brick"
   | "incomplete-family"
   | "insufficient-contrast"

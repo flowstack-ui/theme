@@ -53,6 +53,13 @@ function contract() {
       token("--brick-color-accent-solid", "required", "color", "#554fd8", "#7772ee", "color.accent.solid"),
       token("--brick-color-accent-on-solid", "required", "color", "#ffffff", "#111111", "color.accent.on-solid"),
       token("--brick-radius-overlay", "derived", "dimension", "0.75rem", "0.75rem", "radius.overlay", "invariant"),
+      {
+        ...token("--brick-color-accent-legacy", "deprecated", "color", "#554fd8", "#7772ee", "color.accent.legacy"),
+        deprecated: {
+          replacement: "--brick-color-accent-solid",
+          message: "The legacy accent role is no longer maintained.",
+        },
+      },
     ],
   };
 }
@@ -140,6 +147,15 @@ test("partial atomic families, unknown inputs, invalid values, aliases, and vers
   assert.throws(() => compileTheme(definition(), legacyContract), (error) =>
     error instanceof ThemeCompilationError &&
     error.issues.some(({ code, path }) => code === "invalid-contract" && path === "$contract.contractVersion"));
+
+  const deprecated = definition();
+  deprecated.brick.light.color.accent.legacy = "#3157d5";
+  assert.throws(() => compileTheme(deprecated, contract()), (error) =>
+    error instanceof ThemeCompilationError &&
+    error.issues.some(({ code, path, message }) =>
+      code === "deprecated-token" &&
+      path === "$.brick.light.color.accent.legacy" &&
+      message.includes("brick.light.color.accent.solid")));
 
   const partial = definition();
   delete partial.brick.light.color.accent["on-solid"];

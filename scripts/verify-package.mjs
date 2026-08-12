@@ -26,7 +26,8 @@ function run(command, args, cwd, extraEnvironment = {}) {
 try {
   await mkdir(packageDirectory, { recursive: true });
   const packOutput = run("npm", ["pack", "--json", "--silent", "--pack-destination", packageDirectory], repositoryRoot);
-  const packed = JSON.parse(packOutput);
+  const jsonStart = packOutput.lastIndexOf("\n[");
+  const packed = JSON.parse(jsonStart >= 0 ? packOutput.slice(jsonStart + 1) : packOutput);
   assert.equal(packed.length, 1);
   const archive = resolve(packageDirectory, packed[0].filename);
   const listing = run("tar", ["-tzf", archive], repositoryRoot).trim().split("\n").sort();
@@ -45,6 +46,18 @@ try {
     "package/dist/index.js",
     "package/dist/schema.d.ts",
     "package/dist/schema.js",
+    "package/dist/agents/manifest.json",
+    "package/dist/agents/theme-system.json",
+    "package/dist/agents/theme-system.md",
+    "package/docs/agent-knowledge.md",
+    "package/docs/appearances-and-portals.md",
+    "package/docs/architecture.md",
+    "package/docs/authoring.md",
+    "package/docs/fonts.md",
+    "package/docs/installation.md",
+    "package/docs/migration.md",
+    "package/docs/testing.md",
+    "package/docs/troubleshooting.md",
     "package/package.json",
   ]) {
     assert.ok(listing.includes(expected), `${expected} is missing from ${basename(archive)}`);
@@ -133,6 +146,10 @@ console.log(definition.metadata.id, compilation.report.counts.brickRequired);
 
   const installedPackage = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/package.json"), "utf8"));
   assert.equal(Object.keys(installedPackage.dependencies ?? {}).length, 0);
+  const agentManifest = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/agents/manifest.json"), "utf8"));
+  assert.equal(agentManifest.package, "@flowstack-ui/theme");
+  assert.equal(agentManifest.packageVersion, installedPackage.version);
+  assert.deepEqual(agentManifest.guides.map(({ id }) => id), ["theme-system"]);
 
   console.log(`Verified ${basename(archive)} and its clean consumer.`);
 } finally {

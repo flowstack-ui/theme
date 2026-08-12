@@ -37,10 +37,14 @@
       "types": "./dist/schema.d.ts",
       "default": "./dist/schema.js"
     },
+    "./agents/manifest.json": "./dist/agents/manifest.json",
+    "./agents/*.json": "./dist/agents/*.json",
+    "./agents/*.md": "./dist/agents/*.md",
     "./package.json": "./package.json"
   },
   "files": [
     "CHANGELOG.md",
+    "docs",
     "dist"
   ],
   "engines": {
@@ -48,7 +52,9 @@
   },
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "build": "npm run clean && tsc -p tsconfig.build.json && npm run agents:build",
+    "agents:build": "node scripts/build-agent-knowledge.mjs",
+    "agents:check": "node scripts/build-agent-knowledge.mjs --check",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test:unit": "npm run build && node --test test/*.test.mjs",
     "test:types": "npm run build && tsc -p test/types/tsconfig.json",
@@ -57,7 +63,7 @@
     "verify:repository-contract": "node scripts/verify-repository-contract.mjs",
     "pack:check": "npm run build && node scripts/verify-package.mjs",
     "check:focused": "node scripts/check-focused.mjs",
-    "check:repository": "npm run verify:repository-contract && npm run verify:source && npm run typecheck && npm run test:unit && npm run test:types && npm run pack:check && npm run test:processes",
+    "check:repository": "npm run verify:repository-contract && npm run verify:source && npm run agents:check && npm run typecheck && npm run test:unit && npm run test:types && npm run pack:check && npm run test:processes",
     "check:release": "npm run check:repository",
     "prepare": "npm run build",
     "prepack": "npm run build"

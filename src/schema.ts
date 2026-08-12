@@ -10,6 +10,7 @@ export {
   type BrickComponentThemeInput,
   type BrickContractToken,
   type BrickThemeContract,
+  type BrickTokenDeprecation,
   type BrickTokenClassification,
   type CompiledThemeToken,
   type JsonPrimitive,
