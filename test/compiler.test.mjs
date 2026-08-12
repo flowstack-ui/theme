@@ -26,7 +26,7 @@ function token(name, classification, type, light, dark, path, appearance = "ligh
 function contract() {
   return {
     $schema: BRICK_THEME_CONTRACT_SCHEMA,
-    contractVersion: 1,
+    contractVersion: 2,
     package: { name: "@flowstack-ui/brick", version: "0.1.6" },
     css: {
       variablePrefix: "--brick-",
@@ -37,6 +37,17 @@ function contract() {
       appearanceValues: ["light", "dark"],
     },
     atomicColorFamilies: [{ id: "accent", tokens: ["--brick-color-accent-solid", "--brick-color-accent-on-solid"] }],
+    contrast: {
+      algorithm: "wcag2-relative-luminance",
+      colorSpace: "srgb",
+      pairs: [{
+        id: "accent-on-solid/accent-solid",
+        kind: "text",
+        foreground: "--brick-color-accent-on-solid",
+        background: "--brick-color-accent-solid",
+        minimumRatio: 4.5,
+      }],
+    },
     componentThemeInputs: [{ name: "--brick-drawer-radius", type: "dimension", fallback: "--brick-radius-overlay", supportedRange: "non-negative CSS <length>", component: "drawer" }],
     tokens: [
       token("--brick-color-accent-solid", "required", "color", "#554fd8", "#7772ee", "color.accent.solid"),
@@ -83,6 +94,10 @@ test("compiler resolves aliases and emits complete deterministic dual-appearance
   assert.deepEqual(first.manifest.requirements.fonts, [{ family: "Acme Sans", source: "application" }]);
   assert.equal(first.report.counts.brickOverridden, 4);
   assert.equal(first.report.counts.componentInputs, 1);
+  assert.equal(first.report.counts.contrastPairs, 2);
+  assert.equal(first.report.contrast.algorithm, "wcag2-relative-luminance");
+  assert.equal(first.report.contrast.pairs.length, 2);
+  assert.ok(first.report.contrast.pairs.every(({ ratio, valid }) => ratio >= 4.5 && valid));
 
   const output = await mkdtemp(resolve(tmpdir(), "flowstack-theme-artifacts-"));
   try {
@@ -119,6 +134,13 @@ test("sparse definitions inherit complete Brick defaults", () => {
 });
 
 test("partial atomic families, unknown inputs, invalid values, aliases, and versions fail clearly", () => {
+  const legacyContract = contract();
+  legacyContract.contractVersion = 1;
+  delete legacyContract.contrast;
+  assert.throws(() => compileTheme(definition(), legacyContract), (error) =>
+    error instanceof ThemeCompilationError &&
+    error.issues.some(({ code, path }) => code === "invalid-contract" && path === "$contract.contractVersion"));
+
   const partial = definition();
   delete partial.brick.light.color.accent["on-solid"];
   assert.throws(() => compileTheme(partial, contract()), (error) => error instanceof ThemeCompilationError && error.issues.some(({ code }) => code === "incomplete-family"));
@@ -149,4 +171,24 @@ test("project roles remain project variables and never create Brick color names"
   const result = compileTheme(definition(), contract());
   assert.match(result.css, /--flowstack-theme-roles-promotional/u);
   assert.doesNotMatch(result.css, /--brick-color-promotional/u);
+});
+
+test("contrast validation compares the raw ratio and rejects insufficient pairs", () => {
+  const input = definition();
+  input.brick.light.color.accent.solid = "#777777";
+  assert.throws(() => compileTheme(input, contract()), (error) =>
+    error instanceof ThemeCompilationError &&
+    error.issues.some(({ code, path }) => code === "insufficient-contrast" && path === "$contrast.light.accent-on-solid/accent-solid"));
+});
+
+test("contrast validation accepts opaque rgb syntax and rejects colors it cannot prove", () => {
+  const rgb = definition();
+  rgb.brick.light.color.accent.solid = "rgb(18 97 160)";
+  assert.equal(compileTheme(rgb, contract()).report.counts.contrastPairs, 2);
+
+  const unprovable = definition();
+  unprovable.brick.light.color.accent.solid = "oklch(50% 0.15 250)";
+  assert.throws(() => compileTheme(unprovable, contract()), (error) =>
+    error instanceof ThemeCompilationError &&
+    error.issues.some(({ code, path }) => code === "unverifiable-contrast" && path === "$.brick.light.color.accent.solid"));
 });

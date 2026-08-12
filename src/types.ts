@@ -89,6 +89,22 @@ export interface BrickAtomicColorFamily {
   readonly tokens: readonly string[];
 }
 
+export type BrickContrastKind = "text" | "non-text";
+
+export interface BrickContrastPair {
+  readonly id: string;
+  readonly kind: BrickContrastKind;
+  readonly foreground: string;
+  readonly background: string;
+  readonly minimumRatio: number;
+}
+
+export interface BrickContrastContract {
+  readonly algorithm: "wcag2-relative-luminance";
+  readonly colorSpace: "srgb";
+  readonly pairs: readonly BrickContrastPair[];
+}
+
 export interface BrickComponentThemeInput {
   readonly name: string;
   readonly type: string;
@@ -110,6 +126,7 @@ export interface BrickThemeContract {
     readonly appearanceValues: readonly ThemeAppearance[];
   };
   readonly atomicColorFamilies: readonly BrickAtomicColorFamily[];
+  readonly contrast: BrickContrastContract;
   readonly componentThemeInputs: readonly BrickComponentThemeInput[];
   readonly tokens: readonly BrickContractToken[];
 }
@@ -163,9 +180,23 @@ export interface ThemeCompilationReport {
     readonly brickOverridden: number;
     readonly foundations: number;
     readonly componentInputs: number;
+    readonly contrastPairs: number;
     readonly projectTokens: number;
   };
+  readonly contrast: {
+    readonly algorithm: BrickContrastContract["algorithm"];
+    readonly colorSpace: BrickContrastContract["colorSpace"];
+    readonly pairs: readonly ThemeContrastPairResult[];
+  };
   readonly warnings: readonly string[];
+}
+
+export interface ThemeContrastPairResult extends BrickContrastPair {
+  readonly appearance: ThemeAppearance;
+  readonly foregroundValue: string;
+  readonly backgroundValue: string;
+  readonly ratio: number;
+  readonly valid: true;
 }
 
 export interface ThemeCompilation {
@@ -180,12 +211,14 @@ export type ThemeCompilationIssueCode =
   | "alias-cycle"
   | "incompatible-brick"
   | "incomplete-family"
+  | "insufficient-contrast"
   | "invalid-alias"
   | "invalid-contract"
   | "invalid-token-value"
   | "naming-collision"
   | "unsupported-appearance"
   | "unsupported-component-input"
+  | "unverifiable-contrast"
   | "unknown-token";
 
 export interface ThemeCompilationIssue {

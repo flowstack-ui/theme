@@ -25,6 +25,8 @@ The compiler receives Brick's generated
 `flowstack.brick-theme-contract.v1` as data; it does not import Brick source or
 carry a copied token list. Theme `brick.light` and `brick.dark` objects address
 required semantic paths after the contract's `semantic.<appearance>` prefix.
+Compilation requires contract revision 2 or newer so contrast declarations
+cannot be absent silently.
 Theme `foundations` addresses derived semantic paths. Theme `components`
 addresses only declared inherited component inputs, for example
 `components.drawer.radius`.
@@ -34,6 +36,15 @@ family inherits Brick defaults, but a partially overridden family is rejected.
 Every emitted appearance contains the complete required Brick map.
 Compatibility accepts exact semantic versions, caret or tilde ranges,
 comparator sets, and `||` alternatives.
+
+Brick also owns a versioned list of maintained semantic contrast pairs. Theme
+evaluates those pairs for every supported appearance with WCAG 2 relative
+luminance in sRGB. Text pairs require at least 4.5:1 and non-text pairs require
+at least 3:1; the unrounded ratio decides success. A participating token must
+resolve to an opaque sRGB hex or `rgb()` value. Compilation fails when a pair
+is insufficient or cannot be proved. This contract deliberately excludes
+disabled presentation and does not claim to model gradients, transparency,
+images, consumer overrides, or the final browser composition.
 
 Project `palettes`, `roles`, and `extensions` are open vocabularies. They emit
 under `--flowstack-theme-*`, never create new `--brick-*` meanings, and are
@@ -47,7 +58,8 @@ discoverable namespaces recorded by the manifest.
 - `theme.tokens.json` contains resolved DTCG-compatible `$value` leaves.
 - `theme.manifest.json` records identity, compatibility, activation,
   extensions, requirements, and artifact names.
-- `theme.report.json` records deterministic compilation counts and warnings.
+- `theme.report.json` records deterministic compilation counts, the raw result
+  of every declared contrast pair, and warnings.
 
 Fixed-light and fixed-dark definitions emit one complete appearance. Dual
 definitions may select a fixed default or `system`; the latter adds a static
