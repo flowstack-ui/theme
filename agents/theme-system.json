@@ -1,0 +1,102 @@
+{
+  "schema": "flowstack.agent-guide.v1",
+  "id": "theme-system",
+  "name": "FLOWSTACK Theme system",
+  "package": "@flowstack-ui/theme",
+  "layer": "theme",
+  "kind": "guide",
+  "purpose": "Author, compile, and integrate a project theme without changing Brick component meaning or moving application runtime ownership into Theme.",
+  "decisionOrder": [
+    "Identify brand and product colors as project palettes and roles before mapping any value to Brick.",
+    "Install a released Brick version whose theme contract revision is supported by Theme.",
+    "Map only UI meanings Brick owns into brick.light and brick.dark; keep charts, syntax, editorial, and campaign colors in project roles or namespaced extensions.",
+    "Override a complete atomic Brick family or inherit that entire family from Brick defaults.",
+    "Compile at build time, review the contrast report and static artifacts, then ship the CSS rather than the compiler.",
+    "Let the application own activation, saved preference, fonts, assets, portals, and first-paint behavior."
+  ],
+  "rules": [
+    {
+      "id": "theme-serializable",
+      "level": "must",
+      "statement": "Keep theme definitions JSON-compatible and deterministic; do not use functions, DOM state, environment-dependent values, or runtime callbacks."
+    },
+    {
+      "id": "theme-installed-contract",
+      "level": "must",
+      "statement": "Compile against the theme-contract.json exported by the installed Brick package and do not maintain a copied semantic-token list."
+    },
+    {
+      "id": "theme-complete-family",
+      "level": "must",
+      "statement": "When one member of an atomic Brick color family changes, provide the complete family for that appearance or inherit the complete Brick default."
+    },
+    {
+      "id": "theme-semantic-mapping",
+      "level": "must",
+      "statement": "Map values by semantic UI meaning; never misuse warning, danger, success, or information merely to obtain a desired hue."
+    },
+    {
+      "id": "theme-extra-colors",
+      "level": "must",
+      "statement": "Keep unlimited non-Brick brand, visualization, syntax, editorial, and product colors in palettes, roles, or namespaced extensions."
+    },
+    {
+      "id": "theme-contrast",
+      "level": "must",
+      "statement": "Treat insufficient or unprovable Brick-declared contrast pairs as build failures; do not round a failing ratio into a pass."
+    },
+    {
+      "id": "theme-static-runtime",
+      "level": "must",
+      "statement": "Ship compiled static CSS and keep @flowstack-ui/theme in build tooling unless a separately qualified runtime adapter is introduced."
+    },
+    {
+      "id": "theme-application-ownership",
+      "level": "must",
+      "statement": "Keep theme selection, persistence, pre-paint setup, font and asset loading, and portal-container coordination in the application."
+    },
+    {
+      "id": "theme-breakpoints",
+      "level": "must",
+      "statement": "Do not add theme breakpoints expecting them to recompile Brick media queries; Brick component breakpoints and application layout policy have separate owners."
+    },
+    {
+      "id": "theme-component-inputs",
+      "level": "should",
+      "statement": "Use components only for inputs explicitly audited in the Brick contract; keep local component token overrides local."
+    }
+  ],
+  "ownership": {
+    "brick": [
+      "accessible default values",
+      "semantic UI roles and component recipes",
+      "atomic families, contrast pairs, and approved component inputs"
+    ],
+    "theme": [
+      "serializable project values and mappings",
+      "compatibility, completeness, alias, and contrast validation",
+      "deterministic CSS, token, manifest, and report artifacts"
+    ],
+    "application": [
+      "activation and saved preference",
+      "font and asset loading",
+      "first paint, portals, routes, and product art direction"
+    ]
+  },
+  "validation": [
+    "Validate the definition envelope before compiling.",
+    "Compile against the exact installed Brick contract revision and review every diagnostic.",
+    "Confirm theme.report.json contains one passing result for every declared pair and supported appearance.",
+    "Verify generated artifacts are byte-stable and committed only when the application owns committed build output.",
+    "Build the production application and verify explicit light, dark, nested appearance, portal, first-paint, and forced-colors behavior where applicable.",
+    "Confirm the browser bundle does not contain the Theme compiler."
+  ],
+  "related": [
+    "docs/installation.md",
+    "docs/authoring.md",
+    "docs/fonts.md",
+    "docs/appearances-and-portals.md",
+    "docs/migration.md",
+    "docs/troubleshooting.md"
+  ]
+}

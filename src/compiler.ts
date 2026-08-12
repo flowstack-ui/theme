@@ -51,7 +51,7 @@ function isObject(value: unknown): value is PlainObject {
 function contractIssues(input: unknown): ThemeCompilationIssue[] {
   if (!isObject(input)) return [issue("invalid-contract", "$contract", "Expected a Brick theme contract object.")];
   const issues: ThemeCompilationIssue[] = [];
-  const classifications = new Set(["required", "derived", "component-input", "optional-extension", "internal"]);
+  const classifications = new Set(["required", "derived", "component-input", "optional-extension", "internal", "deprecated"]);
   if (input.$schema !== BRICK_THEME_CONTRACT_SCHEMA) issues.push(issue("invalid-contract", "$contract.$schema", `Expected "${BRICK_THEME_CONTRACT_SCHEMA}".`));
   if (!Number.isInteger(input.contractVersion) || Number(input.contractVersion) < 2) issues.push(issue("invalid-contract", "$contract.contractVersion", "Theme contrast validation requires Brick theme contract revision 2 or newer."));
   if (!isObject(input.package) || input.package.name !== "@flowstack-ui/brick" || typeof input.package.version !== "string" || !parseVersion(input.package.version)) issues.push(issue("invalid-contract", "$contract.package", "Expected an @flowstack-ui/brick package and semantic version."));
@@ -66,6 +66,8 @@ function contractIssues(input: unknown): ThemeCompilationIssue[] {
         issues.push(issue("invalid-contract", `$contract.tokens[${index}]`, "Expected a named, classified, typed token."));
       } else if ((token.classification === "required" || token.classification === "derived") && (typeof token.type !== "string" || !isObject(token.defaults) || !isObject(token.tokenPaths))) {
         issues.push(issue("invalid-contract", `$contract.tokens[${index}]`, "Required and derived tokens need defaults and token paths."));
+      } else if (token.classification === "deprecated" && (!isObject(token.tokenPaths) || !isObject(token.deprecated) || typeof token.deprecated.replacement !== "string")) {
+        issues.push(issue("invalid-contract", `$contract.tokens[${index}]`, "Deprecated tokens need token paths and a replacement token."));
       }
       if (isObject(token) && typeof token.name === "string") {
         if (tokenNames.has(token.name)) issues.push(issue("invalid-contract", `$contract.tokens[${index}].name`, `Duplicate token "${token.name}".`));
@@ -83,6 +85,17 @@ function contractIssues(input: unknown): ThemeCompilationIssue[] {
         }
       }
     }
+  }
+  if (Array.isArray(input.tokens)) {
+    input.tokens.forEach((token, index) => {
+      if (!isObject(token) || token.classification !== "deprecated" || !isObject(token.deprecated) || typeof token.deprecated.replacement !== "string") return;
+      if (!tokenNames.has(token.deprecated.replacement) || token.deprecated.replacement === token.name) {
+        issues.push(issue("invalid-contract", `$contract.tokens[${index}].deprecated.replacement`, `Unknown replacement token "${token.deprecated.replacement}".`));
+      }
+      if (token.deprecated.message !== undefined && typeof token.deprecated.message !== "string") {
+        issues.push(issue("invalid-contract", `$contract.tokens[${index}].deprecated.message`, "Expected a string deprecation message."));
+      }
+    });
   }
   if (!Array.isArray(input.atomicColorFamilies) || input.atomicColorFamilies.some((family) => !isObject(family) || typeof family.id !== "string" || !Array.isArray(family.tokens))) issues.push(issue("invalid-contract", "$contract.atomicColorFamilies", "Expected named atomic families with token arrays."));
   if (!isObject(input.contrast) || input.contrast.algorithm !== "wcag2-relative-luminance" || input.contrast.colorSpace !== "srgb" || !Array.isArray(input.contrast.pairs)) {
@@ -367,11 +380,27 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
   const consumed = new Set<string>();
   const requiredTokens = contract.tokens.filter((token) => token.classification === "required");
   const derivedTokens = contract.tokens.filter((token) => token.classification === "derived");
+  const deprecatedTokens = contract.tokens.filter((token) => token.classification === "deprecated");
   const requiredByName = new Map(requiredTokens.map((token) => [token.name, token]));
   const appearanceTokens: Record<ThemeAppearance, CompiledThemeToken[]> = { light: [], dark: [] };
   const invariantTokens: CompiledThemeToken[] = [];
   let inherited = 0;
   let overridden = 0;
+
+  for (const token of deprecatedTokens) {
+    for (const appearance of definition.appearances.supported) {
+      const semanticPath = tokenAuthorPath(token, appearance);
+      if (!semanticPath) continue;
+      const authorPath = `brick.${appearance}.${semanticPath}`;
+      if (!resolved.has(authorPath)) continue;
+      consumed.add(authorPath);
+      const replacement = contract.tokens.find(({ name }) => name === token.deprecated?.replacement);
+      const replacementPath = replacement ? tokenAuthorPath(replacement, appearance) : undefined;
+      const instruction = replacementPath ? `Use "brick.${appearance}.${replacementPath}" instead.` : `Use ${token.deprecated?.replacement} instead.`;
+      const detail = token.deprecated?.message ? ` ${token.deprecated.message}` : "";
+      issues.push(issue("deprecated-token", `$.${authorPath}`, `${instruction}${detail}`));
+    }
+  }
 
   for (const appearance of definition.appearances.supported) {
     for (const token of requiredTokens) {

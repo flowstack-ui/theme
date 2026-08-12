@@ -28,16 +28,12 @@ loading, and application preference persistence are outside this release.
 ## Installation
 
 ```bash
+npm install @flowstack-ui/brick
 npm install --save-dev @flowstack-ui/theme
 ```
 
-Before the first registry release, qualification consumers may install a full
-immutable Git commit. Exact Git installs run the package build and must pin the
-complete commit rather than a branch:
-
-```bash
-npm install --save-dev "github:flowstack-ui/theme#<full-commit>"
-```
+Theme 0.1 requires Brick's generated theme contract revision 2 or newer. Keep
+Theme in build tooling and ship its generated CSS rather than the compiler.
 
 ## Authoring
 
@@ -159,6 +155,11 @@ npm run check:release
 ```
 
 See [architecture](docs/architecture.md) and [testing](docs/testing.md).
+Public guides cover [installation](docs/installation.md),
+[authoring](docs/authoring.md), [fonts](docs/fonts.md),
+[appearances and portals](docs/appearances-and-portals.md),
+[migration](docs/migration.md), [troubleshooting](docs/troubleshooting.md),
+and [Agent Knowledge](docs/agent-knowledge.md).
 
 ## License
 

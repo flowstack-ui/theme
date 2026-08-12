@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0 - 2026-08-12
+
 ### Added
 
 - Initial `flowstack.theme.v1` TypeScript definition contract.
@@ -21,3 +23,8 @@
   semantic contrast pair declared by Brick in each supported appearance.
 - An explicit Brick theme-contract revision 2 minimum so older contracts
   cannot appear contrast-qualified.
+- Public installation, authoring, fonts, appearances/portals, migration,
+  troubleshooting, and Agent Knowledge guidance.
+- Packed human- and machine-readable Theme Agent Knowledge entry points.
+- Explicit deprecated-token diagnostics that name the Brick replacement path
+  instead of silently emitting an obsolete semantic variable.
