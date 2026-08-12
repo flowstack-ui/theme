@@ -230,8 +230,11 @@ function setNestedToken(root: PlainObject, path: string, value: string | number,
   });
 }
 
-function declarations(tokens: readonly CompiledThemeToken[]): string {
-  return [...tokens].sort((a, b) => compareText(a.name, b.name)).map((token) => `    ${token.name}: ${String(token.value)};`).join("\n");
+function declarations(tokens: readonly CompiledThemeToken[], colorScheme?: ThemeAppearance | "light dark"): string {
+  return [
+    ...(colorScheme ? [`    color-scheme: ${colorScheme};`] : []),
+    ...[...tokens].sort((a, b) => compareText(a.name, b.name)).map((token) => `    ${token.name}: ${String(token.value)};`),
+  ].join("\n");
 }
 
 function selector(attribute: string, value: string): string {
@@ -244,13 +247,14 @@ function buildCss(definition: ThemeDefinition, contract: BrickThemeContract, inv
   const defaultAppearance = definition.appearances.default === "system" ? "light" : definition.appearances.default;
   const blocks: string[] = [];
   const base = [...invariant, ...byAppearance[defaultAppearance]];
-  blocks.push(`  :where(${themeSelector}) {\n${declarations(base)}\n  }`);
+  const baseColorScheme = definition.appearances.default === "system" ? "light dark" : defaultAppearance;
+  blocks.push(`  :where(${themeSelector}) {\n${declarations(base, baseColorScheme)}\n  }`);
   if (definition.appearances.default === "system") {
     blocks.push(`  @media (prefers-color-scheme: dark) {\n    :where(${themeSelector}:not([${appearanceAttribute}])) {\n${declarations(byAppearance.dark).replace(/^/gmu, "  ")}\n    }\n  }`);
   }
   for (const appearance of definition.appearances.supported) {
     const explicit = selector(appearanceAttribute, appearance);
-    blocks.push(`  :where(${themeSelector}${explicit}),\n  :where(${themeSelector} ${explicit}) {\n${declarations(byAppearance[appearance])}\n  }`);
+    blocks.push(`  :where(${themeSelector}${explicit}),\n  :where(${themeSelector} ${explicit}) {\n${declarations(byAppearance[appearance], appearance)}\n  }`);
   }
   return `@layer ${contract.css.themeLayer} {\n${blocks.join("\n\n")}\n}\n`;
 }

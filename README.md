@@ -84,9 +84,7 @@ Brick mappings use semantic paths from its generated contract:
   "brick": {
     "light": {
       "color": {
-        "focus": {
-          "ring": "{roles.brandPrimary}"
-        }
+        "focus-ring": "{roles.brandPrimary}"
       }
     }
   }

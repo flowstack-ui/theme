@@ -13,3 +13,5 @@
   component-input, and namespaced project-token resolution.
 - Deterministic CSS, DTCG token, manifest, and report artifacts.
 - `flowstack-theme compile` plus programmatic file loading and artifact writing.
+- Explicit `color-scheme` output for fixed, system, and nested appearance
+  boundaries so native controls follow the compiled theme.
