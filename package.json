@@ -1,7 +1,7 @@
 {
   "name": "@flowstack-ui/theme",
   "version": "0.1.0",
-  "description": "Serializable theme authoring and validation for Flowstack UI.",
+  "description": "Serializable theme authoring and static compilation for Flowstack UI.",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

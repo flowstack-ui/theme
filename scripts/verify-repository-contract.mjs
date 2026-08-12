@@ -26,6 +26,8 @@ for (const path of [
   "src/index.ts",
   "src/schema.ts",
   "src/validation.ts",
+  "src/compiler.ts",
+  "src/artifacts.ts",
 ]) {
   await requirePath(path);
 }
@@ -33,8 +35,8 @@ for (const path of [
 if (configuration.schemaVersion !== 1) errors.push("unsupported verification schema");
 if (configuration.id !== "theme") errors.push(`verification id is ${configuration.id}`);
 if (configuration.kind !== "public-package") errors.push(`unexpected repository kind ${configuration.kind}`);
-if (configuration.servers.length !== 0) errors.push("bootstrap must not register servers");
-if (configuration.browserConfigs.length !== 0) errors.push("bootstrap must not register browser configs");
+if (configuration.servers.length !== 0) errors.push("static compiler must not register servers");
+if (configuration.browserConfigs.length !== 0) errors.push("static compiler must not register browser configs");
 
 for (const [role, script] of Object.entries(configuration.commands)) {
   if (!packageJson.scripts?.[script]) errors.push(`${role} requires npm script ${script}`);
