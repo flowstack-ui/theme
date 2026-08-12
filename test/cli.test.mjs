@@ -29,7 +29,7 @@ test("CLI compiles all four artifacts", () => {
     }));
     writeFileSync(contract, JSON.stringify({
       $schema: "flowstack.brick-theme-contract.v1",
-      contractVersion: 1,
+      contractVersion: 2,
       package: { name: "@flowstack-ui/brick", version: "0.1.6" },
       css: {
         variablePrefix: "--brick-",
@@ -39,16 +39,37 @@ test("CLI compiles all four artifacts", () => {
         appearanceAttribute: "data-brick-appearance",
         appearanceValues: ["light", "dark"],
       },
-      atomicColorFamilies: [{ id: "accent", tokens: ["--brick-color-accent-solid"] }],
+      atomicColorFamilies: [{ id: "accent", tokens: ["--brick-color-accent-solid", "--brick-color-accent-on-solid"] }],
+      contrast: {
+        algorithm: "wcag2-relative-luminance",
+        colorSpace: "srgb",
+        pairs: [{
+          id: "accent-on-solid/accent-solid",
+          kind: "text",
+          foreground: "--brick-color-accent-on-solid",
+          background: "--brick-color-accent-solid",
+          minimumRatio: 4.5,
+        }],
+      },
       componentThemeInputs: [],
-      tokens: [{
-        name: "--brick-color-accent-solid",
-        classification: "required",
-        type: "color",
-        appearance: "light-and-dark",
-        defaults: { light: "#554fd8", dark: "#7772ee" },
-        tokenPaths: { light: "semantic.light.color.accent.solid", dark: "semantic.dark.color.accent.solid" },
-      }],
+      tokens: [
+        {
+          name: "--brick-color-accent-solid",
+          classification: "required",
+          type: "color",
+          appearance: "light-and-dark",
+          defaults: { light: "#554fd8", dark: "#7772ee" },
+          tokenPaths: { light: "semantic.light.color.accent.solid", dark: "semantic.dark.color.accent.solid" },
+        },
+        {
+          name: "--brick-color-accent-on-solid",
+          classification: "required",
+          type: "color",
+          appearance: "light-and-dark",
+          defaults: { light: "#ffffff", dark: "#111111" },
+          tokenPaths: { light: "semantic.light.color.accent.on-solid", dark: "semantic.dark.color.accent.on-solid" },
+        },
+      ],
     }));
     const result = spawnSync(process.execPath, [cli, "compile", theme, "--contract", contract, "--out-dir", output], { encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);

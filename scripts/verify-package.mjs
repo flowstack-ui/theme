@@ -74,7 +74,7 @@ const definition = defineTheme({
 
 const contract = {
   $schema: BRICK_THEME_CONTRACT_SCHEMA,
-  contractVersion: 1,
+  contractVersion: 2,
   package: { name: "@flowstack-ui/brick", version: "0.1.6" },
   css: {
     variablePrefix: "--brick-",
@@ -84,16 +84,37 @@ const contract = {
     appearanceAttribute: "data-brick-appearance",
     appearanceValues: ["light", "dark"],
   },
-  atomicColorFamilies: [{ id: "accent", tokens: ["--brick-color-accent-solid"] }],
+  atomicColorFamilies: [{ id: "accent", tokens: ["--brick-color-accent-solid", "--brick-color-accent-on-solid"] }],
+  contrast: {
+    algorithm: "wcag2-relative-luminance",
+    colorSpace: "srgb",
+    pairs: [{
+      id: "accent-on-solid/accent-solid",
+      kind: "text",
+      foreground: "--brick-color-accent-on-solid",
+      background: "--brick-color-accent-solid",
+      minimumRatio: 4.5,
+    }],
+  },
   componentThemeInputs: [],
-  tokens: [{
-    name: "--brick-color-accent-solid",
-    classification: "required",
-    type: "color",
-    appearance: "light-and-dark",
-    defaults: { light: "#3157d5", dark: "#6683e8" },
-    tokenPaths: { light: "semantic.light.color.accent.solid", dark: "semantic.dark.color.accent.solid" },
-  }],
+  tokens: [
+    {
+      name: "--brick-color-accent-solid",
+      classification: "required",
+      type: "color",
+      appearance: "light-and-dark",
+      defaults: { light: "#3157d5", dark: "#6683e8" },
+      tokenPaths: { light: "semantic.light.color.accent.solid", dark: "semantic.dark.color.accent.solid" },
+    },
+    {
+      name: "--brick-color-accent-on-solid",
+      classification: "required",
+      type: "color",
+      appearance: "light-and-dark",
+      defaults: { light: "#ffffff", dark: "#111111" },
+      tokenPaths: { light: "semantic.light.color.accent.on-solid", dark: "semantic.dark.color.accent.on-solid" },
+    },
+  ],
 };
 
 if (SCHEMA_ENTRY !== THEME_DEFINITION_SCHEMA) throw new Error("schema subpath mismatch");
@@ -106,7 +127,7 @@ console.log(definition.metadata.id, compilation.report.counts.brickRequired);
 
   run("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund", archive], consumerDirectory);
   const consumerOutput = run(process.execPath, ["index.mjs"], consumerDirectory).trim();
-  assert.equal(consumerOutput, "archive-consumer 1");
+  assert.equal(consumerOutput, "archive-consumer 2");
   const help = run(process.execPath, [resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/cli.js"), "--help"], consumerDirectory);
   assert.match(help, /flowstack-theme validate/u);
 

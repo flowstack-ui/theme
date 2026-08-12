@@ -10,6 +10,7 @@ import {
   type ThemeCompilation,
   type ThemeCompilationIssue,
   type ThemeCompilationIssueCode,
+  type ThemeContrastPairResult,
   type ThemeData,
   type ThemeDefinition,
 } from "./types.js";
@@ -52,13 +53,14 @@ function contractIssues(input: unknown): ThemeCompilationIssue[] {
   const issues: ThemeCompilationIssue[] = [];
   const classifications = new Set(["required", "derived", "component-input", "optional-extension", "internal"]);
   if (input.$schema !== BRICK_THEME_CONTRACT_SCHEMA) issues.push(issue("invalid-contract", "$contract.$schema", `Expected "${BRICK_THEME_CONTRACT_SCHEMA}".`));
-  if (!Number.isInteger(input.contractVersion) || Number(input.contractVersion) < 1) issues.push(issue("invalid-contract", "$contract.contractVersion", "Expected a positive integer."));
+  if (!Number.isInteger(input.contractVersion) || Number(input.contractVersion) < 2) issues.push(issue("invalid-contract", "$contract.contractVersion", "Theme contrast validation requires Brick theme contract revision 2 or newer."));
   if (!isObject(input.package) || input.package.name !== "@flowstack-ui/brick" || typeof input.package.version !== "string" || !parseVersion(input.package.version)) issues.push(issue("invalid-contract", "$contract.package", "Expected an @flowstack-ui/brick package and semantic version."));
   if (!isObject(input.css) || input.css.variablePrefix !== "--brick-" || typeof input.css.themeLayer !== "string" || !cssLayerPattern.test(input.css.themeLayer) || typeof input.css.themeAttribute !== "string" || !dataAttributePattern.test(input.css.themeAttribute) || typeof input.css.appearanceAttribute !== "string" || !dataAttributePattern.test(input.css.appearanceAttribute) || !Array.isArray(input.css.appearanceValues) || input.css.appearanceValues.some((value) => value !== "light" && value !== "dark")) issues.push(issue("invalid-contract", "$contract.css", "Expected the safe Brick CSS activation contract."));
+  const tokenNames = new Set<string>();
+  const requiredColorTokenNames = new Set<string>();
   if (!Array.isArray(input.tokens)) {
     issues.push(issue("invalid-contract", "$contract.tokens", "Expected a token array."));
   } else {
-    const names = new Set<string>();
     input.tokens.forEach((token, index) => {
       if (!isObject(token) || typeof token.name !== "string" || !cssCustomPropertyPattern.test(token.name) || typeof token.classification !== "string" || !classifications.has(token.classification) || (typeof token.type !== "string" && token.type !== null)) {
         issues.push(issue("invalid-contract", `$contract.tokens[${index}]`, "Expected a named, classified, typed token."));
@@ -66,20 +68,40 @@ function contractIssues(input: unknown): ThemeCompilationIssue[] {
         issues.push(issue("invalid-contract", `$contract.tokens[${index}]`, "Required and derived tokens need defaults and token paths."));
       }
       if (isObject(token) && typeof token.name === "string") {
-        if (names.has(token.name)) issues.push(issue("invalid-contract", `$contract.tokens[${index}].name`, `Duplicate token "${token.name}".`));
-        names.add(token.name);
+        if (tokenNames.has(token.name)) issues.push(issue("invalid-contract", `$contract.tokens[${index}].name`, `Duplicate token "${token.name}".`));
+        tokenNames.add(token.name);
+        if (token.type === "color") {
+          if (token.classification === "required") requiredColorTokenNames.add(token.name);
+        }
       }
     });
     if (Array.isArray(input.atomicColorFamilies)) {
       for (const [index, family] of input.atomicColorFamilies.entries()) {
         if (!isObject(family) || !Array.isArray(family.tokens)) continue;
         for (const name of family.tokens) {
-          if (typeof name !== "string" || !names.has(name)) issues.push(issue("invalid-contract", `$contract.atomicColorFamilies[${index}].tokens`, `Unknown family token "${String(name)}".`));
+          if (typeof name !== "string" || !tokenNames.has(name)) issues.push(issue("invalid-contract", `$contract.atomicColorFamilies[${index}].tokens`, `Unknown family token "${String(name)}".`));
         }
       }
     }
   }
   if (!Array.isArray(input.atomicColorFamilies) || input.atomicColorFamilies.some((family) => !isObject(family) || typeof family.id !== "string" || !Array.isArray(family.tokens))) issues.push(issue("invalid-contract", "$contract.atomicColorFamilies", "Expected named atomic families with token arrays."));
+  if (!isObject(input.contrast) || input.contrast.algorithm !== "wcag2-relative-luminance" || input.contrast.colorSpace !== "srgb" || !Array.isArray(input.contrast.pairs)) {
+    issues.push(issue("invalid-contract", "$contract.contrast", "Expected the sRGB WCAG 2 contrast contract."));
+  } else {
+    const pairIds = new Set<string>();
+    input.contrast.pairs.forEach((pair, index) => {
+      if (!isObject(pair) || typeof pair.id !== "string" || (pair.kind !== "text" && pair.kind !== "non-text") || typeof pair.foreground !== "string" || typeof pair.background !== "string" || typeof pair.minimumRatio !== "number" || !Number.isFinite(pair.minimumRatio) || pair.minimumRatio < 1 || pair.minimumRatio > 21) {
+        issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}]`, "Expected a named text or non-text contrast pair with a ratio from 1 through 21."));
+        return;
+      }
+      if (pairIds.has(pair.id)) issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].id`, `Duplicate contrast pair "${pair.id}".`));
+      pairIds.add(pair.id);
+      if (!requiredColorTokenNames.has(pair.foreground)) issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].foreground`, `Expected a required semantic color token; received "${pair.foreground}".`));
+      if (!requiredColorTokenNames.has(pair.background)) issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].background`, `Expected a required semantic color token; received "${pair.background}".`));
+      if (pair.kind === "text" && pair.minimumRatio < 4.5) issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].minimumRatio`, "Normal text pairs must require at least 4.5:1."));
+      if (pair.kind === "non-text" && pair.minimumRatio < 3) issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].minimumRatio`, "Non-text pairs must require at least 3:1."));
+    });
+  }
   if (!Array.isArray(input.componentThemeInputs) || input.componentThemeInputs.some((entry) => !isObject(entry) || typeof entry.name !== "string" || !cssCustomPropertyPattern.test(entry.name) || typeof entry.type !== "string" || typeof entry.component !== "string" || typeof entry.fallback !== "string" || typeof entry.supportedRange !== "string")) issues.push(issue("invalid-contract", "$contract.componentThemeInputs", "Expected declared component theme inputs."));
   return issues;
 }
@@ -201,6 +223,67 @@ function validComponentValue(type: string, supportedRange: string, value: string
   if (supportedRange.toLowerCase().includes("non-negative") && typeof value === "string" && /^-\d/u.test(value.trim())) return false;
   if (supportedRange.toLowerCase().includes("non-negative") && typeof value === "number" && value < 0) return false;
   return true;
+}
+
+type SrgbColor = readonly [number, number, number];
+
+function parseSrgbChannel(value: string): number | undefined {
+  const trimmed = value.trim();
+  const percentage = trimmed.endsWith("%");
+  const number = Number(percentage ? trimmed.slice(0, -1) : trimmed);
+  if (!Number.isFinite(number)) return undefined;
+  const normalized = percentage ? number / 100 : number / 255;
+  return normalized >= 0 && normalized <= 1 ? normalized : undefined;
+}
+
+function opaqueAlpha(value: string | undefined): boolean {
+  if (value === undefined) return true;
+  const trimmed = value.trim();
+  if (trimmed.endsWith("%")) return Number(trimmed.slice(0, -1)) === 100;
+  return Number(trimmed) === 1;
+}
+
+function parseOpaqueSrgb(value: string | number): SrgbColor | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().toLowerCase();
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/u.exec(trimmed)?.[1];
+  if (hex) {
+    const expanded = hex.length <= 4 ? [...hex].map((part) => `${part}${part}`).join("") : hex;
+    if (expanded.length === 8 && expanded.slice(6) !== "ff") return undefined;
+    return [0, 2, 4].map((index) => Number.parseInt(expanded.slice(index, index + 2), 16) / 255) as unknown as SrgbColor;
+  }
+
+  const functional = /^rgba?\((.*)\)$/u.exec(trimmed)?.[1];
+  if (!functional) return undefined;
+  let channels: string[];
+  let alpha: string | undefined;
+  if (functional.includes(",")) {
+    const parts = functional.split(",").map((part) => part.trim());
+    channels = parts.slice(0, 3);
+    alpha = parts[3];
+  } else {
+    const [channelSource, alphaSource] = functional.split("/").map((part) => part.trim());
+    channels = channelSource.split(/\s+/u);
+    alpha = alphaSource;
+  }
+  if (channels.length !== 3 || !opaqueAlpha(alpha)) return undefined;
+  const parsed = channels.map(parseSrgbChannel);
+  return parsed.every((channel): channel is number => channel !== undefined)
+    ? parsed as unknown as SrgbColor
+    : undefined;
+}
+
+function relativeLuminance(color: SrgbColor): number {
+  const [red, green, blue] = color.map((channel) =>
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4) as unknown as SrgbColor;
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(foreground: SrgbColor, background: SrgbColor): number {
+  const foregroundLuminance = relativeLuminance(foreground);
+  const backgroundLuminance = relativeLuminance(background);
+  return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+    (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
 }
 
 function cssSegment(path: string, issues: ThemeCompilationIssue[]): string | undefined {
@@ -351,6 +434,43 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
     invariantTokens.push({ name: input.name, path: authorPath, type: input.type, value, source: "theme" });
   }
 
+  const contrastResults: ThemeContrastPairResult[] = [];
+  const unverifiableTokens = new Set<string>();
+  for (const appearance of definition.appearances.supported) {
+    const tokensByName = new Map(appearanceTokens[appearance].map((token) => [token.name, token]));
+    for (const pair of contract.contrast.pairs) {
+      const foregroundToken = tokensByName.get(pair.foreground);
+      const backgroundToken = tokensByName.get(pair.background);
+      if (!foregroundToken || !backgroundToken) {
+        issues.push(issue("invalid-contract", `$contract.contrast.pairs.${pair.id}`, `Contrast pair tokens are not available for the ${appearance} appearance.`));
+        continue;
+      }
+      const foreground = parseOpaqueSrgb(foregroundToken.value);
+      const background = parseOpaqueSrgb(backgroundToken.value);
+      for (const [token, parsed] of [[foregroundToken, foreground], [backgroundToken, background]] as const) {
+        const key = `${appearance}:${token.name}`;
+        if (!parsed && !unverifiableTokens.has(key)) {
+          unverifiableTokens.add(key);
+          issues.push(issue("unverifiable-contrast", `$.${token.path}`, `Contrast tokens must resolve to an opaque sRGB hex or rgb() color; received "${String(token.value)}".`));
+        }
+      }
+      if (!foreground || !background) continue;
+      const ratio = contrastRatio(foreground, background);
+      if (ratio < pair.minimumRatio) {
+        issues.push(issue("insufficient-contrast", `$contrast.${appearance}.${pair.id}`, `${pair.foreground} against ${pair.background} has ${ratio.toPrecision(6)}:1 contrast; ${pair.minimumRatio}:1 is required.`));
+        continue;
+      }
+      contrastResults.push({
+        ...pair,
+        appearance,
+        foregroundValue: String(foregroundToken.value),
+        backgroundValue: String(backgroundToken.value),
+        ratio,
+        valid: true,
+      });
+    }
+  }
+
   const projectTokens: CompiledThemeToken[] = [];
   const cssNames = new Map<string, string>();
   for (const [path, value] of [...resolved].sort(([left], [right]) => compareText(left, right))) {
@@ -402,7 +522,12 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
     valid: true,
     themeId: definition.metadata.id,
     brickVersion: contract.package.version,
-    counts: { emitted: allTokens.length, brickRequired: requiredTokens.length * definition.appearances.supported.length, brickInherited: inherited, brickOverridden: overridden, foundations: foundationCount, componentInputs: componentCount, projectTokens: projectTokens.length },
+    counts: { emitted: allTokens.length, brickRequired: requiredTokens.length * definition.appearances.supported.length, brickInherited: inherited, brickOverridden: overridden, foundations: foundationCount, componentInputs: componentCount, contrastPairs: contrastResults.length, projectTokens: projectTokens.length },
+    contrast: {
+      algorithm: contract.contrast.algorithm,
+      colorSpace: contract.contrast.colorSpace,
+      pairs: contrastResults,
+    },
     warnings: [] as readonly string[],
   } as const;
   return { css: buildCss(definition, contract, invariantTokens, appearanceTokens), tokens: tokenDocument as Readonly<Record<string, JsonValue>>, manifest, report, resolvedTokens: allTokens };

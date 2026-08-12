@@ -17,7 +17,7 @@ npm run check:release
 - `validation` builds the package and runs structural validation tests.
 - `compiler` covers aliases, defaults, atomic families, fixed and dual
   appearances, component inputs, project roles, artifact writes, deterministic
-  output, and failure diagnostics.
+  output, declared semantic contrast pairs, and failure diagnostics.
 - `cli` builds the package and runs CLI process tests.
 - `all` runs every focused package test.
 
@@ -38,4 +38,5 @@ package's exact-archive consumer.
 
 Human review remains responsible for deciding whether public schema meaning is
 appropriately stable. Automated structural success cannot approve product
-semantics.
+semantics. Compiler contrast results cover declared opaque color pairs; browser
+qualification remains responsible for rendered states and composition.

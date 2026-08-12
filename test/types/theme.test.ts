@@ -34,7 +34,7 @@ void definition;
 
 const contract: BrickThemeContract = {
   $schema: BRICK_THEME_CONTRACT_SCHEMA,
-  contractVersion: 1,
+  contractVersion: 2,
   package: { name: "@flowstack-ui/brick", version: "0.1.6" },
   css: {
     variablePrefix: "--brick-",
@@ -45,6 +45,7 @@ const contract: BrickThemeContract = {
     appearanceValues: ["light", "dark"],
   },
   atomicColorFamilies: [],
+  contrast: { algorithm: "wcag2-relative-luminance", colorSpace: "srgb", pairs: [] },
   componentThemeInputs: [],
   tokens: [],
 };

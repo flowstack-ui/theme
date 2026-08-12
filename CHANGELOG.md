@@ -17,3 +17,7 @@
   boundaries so native controls follow the compiled theme.
 - Build preparation for immutable Git-commit installs used by pre-release
   qualification consumers.
+- WCAG 2 relative-luminance validation and deterministic reporting for every
+  semantic contrast pair declared by Brick in each supported appearance.
+- An explicit Brick theme-contract revision 2 minimum so older contracts
+  cannot appear contrast-qualified.

@@ -15,6 +15,8 @@ The package provides:
 - deterministic structural and JSON-compatibility validation;
 - exact alias, default, appearance, atomic-family, foundation, component-input,
   and extension resolution against a Brick theme contract;
+- build-time WCAG 2 contrast validation for Brick-declared semantic color
+  pairs in every supported appearance;
 - byte-stable CSS, DTCG token, manifest, and report artifacts;
 - JSON validation and compilation CLI commands;
 - package and exact-archive consumer verification; and
@@ -85,6 +87,9 @@ The compiler then resolves exact aliases such as
 `{palettes.brand.primary}`. Palettes, roles, and namespaced extensions remain
 project vocabulary and emit `--flowstack-theme-*` variables.
 
+Theme 0.1 compilation requires Brick theme contract revision 2 or newer. That
+revision supplies the semantic contrast declarations used by the safety gate.
+
 Brick mappings use semantic paths from its generated contract:
 
 ```json
@@ -104,6 +109,18 @@ family's complete map for that appearance. Omitting the entire family inherits
 Brick's complete defaults. `foundations` accepts only contract-declared derived
 semantic paths, while `components` accepts only Brick's audited component
 theme inputs.
+
+Brick's contract also declares the foreground/background relationships it
+promises to maintain. The compiler checks every declared pair in every emitted
+appearance using the WCAG 2 relative-luminance algorithm: normal text requires
+at least 4.5:1 and non-text UI indicators require at least 3:1. The raw ratio is
+compared without rounding and is recorded in `theme.report.json`.
+
+Colors used by those declared pairs must resolve to opaque sRGB hex or `rgb()`
+syntax so the build can prove the result. Other valid CSS color syntax remains
+available for project tokens that do not participate in a declared pair.
+Gradients, transparency, images, application overrides, and the final rendered
+composition remain browser-level accessibility responsibilities.
 
 ## JSON CLI
 
