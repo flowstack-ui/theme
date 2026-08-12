@@ -12,7 +12,7 @@ Define any number of raw palettes, then name the roles your product needs:
 {
   "$schema": "flowstack.theme.v1",
   "metadata": { "id": "acme", "name": "Acme" },
-  "compatibility": { "brick": "^0.1.7" },
+  "compatibility": { "brick": "^0.1.9" },
   "appearances": {
     "supported": ["light", "dark"],
     "default": "system"
@@ -81,4 +81,3 @@ keeping unrelated hover, pressed, or foreground values.
 Aliases must occupy the complete value, for example
 `"{roles.brandPrimary}"`. Unknown aliases, cycles, unsupported values,
 incomplete families, and unknown Brick paths fail compilation.
-
