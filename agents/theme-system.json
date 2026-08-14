@@ -11,7 +11,9 @@
     "If using Colors, review its candidate explicitly and scaffold selected families through the serialized file interchange.",
     "Install a released Brick version whose theme contract revision is supported by Theme.",
     "Map only UI meanings Brick owns into brick.light and brick.dark; keep charts, syntax, editorial, and campaign colors in project roles or namespaced extensions.",
+    "Use appearanceRoles for optional project or package meanings that vary between light and dark, and declare their maintained foreground/background relationships explicitly.",
     "Override a complete atomic Brick family or inherit that entire family from Brick defaults.",
+    "Use only Brick-declared component theme inputs and treat their closed values as project-wide policy with component props remaining available for local exceptions.",
     "Compile at build time, review the contrast report and static artifacts, then ship the CSS rather than the compiler.",
     "Let the application own activation, saved preference, fonts, assets, portals, and first-paint behavior."
   ],
@@ -49,7 +51,12 @@
     {
       "id": "theme-contrast",
       "level": "must",
-      "statement": "Treat insufficient or unprovable Brick-declared contrast pairs as build failures; do not round a failing ratio into a pass."
+      "statement": "Treat insufficient or unprovable Brick-declared and project-declared contrast pairs as build failures; do not round a failing ratio into a pass."
+    },
+    {
+      "id": "theme-appearance-roles",
+      "level": "must",
+      "statement": "Define every appearance-aware project role for every supported appearance, keep its logical meaning stable, and do not duplicate the same path in invariant roles."
     },
     {
       "id": "theme-static-runtime",
@@ -69,7 +76,7 @@
     {
       "id": "theme-component-inputs",
       "level": "should",
-      "statement": "Use components only for inputs explicitly audited in the Brick contract; keep local component token overrides local."
+      "statement": "Use components only for inputs explicitly audited in the Brick contract; honor closed allowed values and their conditional validation, and keep local component token overrides local."
     }
   ],
   "ownership": {
@@ -81,6 +88,7 @@
     "theme": [
       "serializable project values and mappings",
       "compatibility, completeness, alias, and contrast validation",
+      "appearance-aware project roles and explicit project relationships",
       "deterministic CSS, token, manifest, and report artifacts"
     ],
     "application": [
@@ -93,6 +101,8 @@
     "Validate the definition envelope before compiling.",
     "When using Colors interchange, confirm the candidate review and scaffold report identify the intended families and semantic jobs.",
     "Compile against the exact installed Brick contract revision and review every diagnostic.",
+    "When a categorical component input activates conditional validation, confirm every resulting contrast pair passes in every supported appearance.",
+    "Confirm every appearance role is complete and every declared project relationship passes in every supported appearance.",
     "Confirm theme.report.json contains one passing result for every declared pair and supported appearance.",
     "Verify generated artifacts are byte-stable and committed only when the application owns committed build output.",
     "Build the production application and verify explicit light, dark, nested appearance, portal, first-paint, and forced-colors behavior where applicable.",

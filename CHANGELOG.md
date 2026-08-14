@@ -8,6 +8,13 @@
 - Explicit palette and semantic scaffold mapping with complete installed Brick
   atomic-family expansion.
 - `flowstack-theme scaffold-colors` and deterministic scaffold reports.
+- Contract revision 3 support for closed categorical component inputs.
+- Conditional semantic contrast validation, including text distinction when a
+  theme removes a Link's resting underline.
+- Appearance-aware project roles with stable CSS variables across default,
+  system, explicit, and nested appearances.
+- Declarative project contrast relationships with separate deterministic
+  reporting from Brick-owned pairs.
 
 ## 0.1.0 - 2026-08-12
 

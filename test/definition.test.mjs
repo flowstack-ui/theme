@@ -42,6 +42,36 @@ test("a serializable multi-palette definition validates", () => {
   assert.doesNotThrow(() => assertThemeDefinition(theme));
 });
 
+test("appearance roles and project contrast relationships validate", () => {
+  const theme = validTheme();
+  theme.appearanceRoles = {
+    light: { blocks: { expressiveSurface: { surface: "#4a2f00", foreground: "#ffffff" } } },
+    dark: { blocks: { expressiveSurface: { surface: "#2f2108", foreground: "#ffffff" } } },
+  };
+  theme.relationships = {
+    contrast: [{
+      id: "blocks-expressive-surface-content",
+      kind: "text",
+      foreground: "blocks.expressiveSurface.foreground",
+      background: "blocks.expressiveSurface.surface",
+      minimumRatio: 4.5,
+    }],
+  };
+  assert.deepEqual(validateThemeDefinition(theme), { valid: true, issues: [] });
+});
+
+test("appearance role and relationship structure is strict", () => {
+  const theme = validTheme();
+  theme.appearanceRoles = { sepia: {} };
+  theme.relationships = { contrast: [{ id: "pair", foreground: "role.fg" }] };
+  const result = validateThemeDefinition(theme);
+  assert.equal(result.valid, false);
+  assert.ok(result.issues.some(({ code, path }) => code === "unknown-key" && path === "$.appearanceRoles.sepia"));
+  assert.ok(result.issues.some(({ code, path }) => code === "missing-value" && path.endsWith(".kind")));
+  assert.ok(result.issues.some(({ code, path }) => code === "missing-value" && path.endsWith(".background")));
+  assert.ok(result.issues.some(({ code, path }) => code === "missing-value" && path.endsWith(".minimumRatio")));
+});
+
 test("system preference requires both appearance maps", () => {
   const theme = validTheme();
   theme.appearances.supported = ["light"];

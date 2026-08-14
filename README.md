@@ -16,7 +16,10 @@ The package provides:
 - exact alias, default, appearance, atomic-family, foundation, component-input,
   and extension resolution against a Brick theme contract;
 - build-time WCAG 2 contrast validation for Brick-declared semantic color
-  pairs in every supported appearance;
+  pairs in every supported appearance, including conditions activated by a
+  closed component-theme choice;
+- appearance-aware project roles and separately reported project contrast
+  relationships for optional product and package meanings outside Brick;
 - byte-stable CSS, DTCG token, manifest, and report artifacts;
 - JSON validation, Colors-candidate scaffolding, and compilation CLI commands;
 - package and exact-archive consumer verification; and
@@ -85,8 +88,16 @@ The compiler then resolves exact aliases such as
 `{palettes.brand.primary}`. Palettes, roles, and namespaced extensions remain
 project vocabulary and emit `--flowstack-theme-*` variables.
 
+Use `appearanceRoles` for optional project or package meanings whose values
+change with light and dark appearance. A matching `relationships.contrast`
+entry can require and report an opaque foreground/background pair without
+creating a new Brick semantic. See [authoring](docs/authoring.md) for the full
+shape.
+
 Theme 0.1 compilation requires Brick theme contract revision 2 or newer. That
-revision supplies the semantic contrast declarations used by the safety gate.
+revision supplies the semantic contrast declarations used by the safety gate;
+revision 3 may additionally publish closed categorical component inputs and
+conditional pairs.
 
 Brick mappings use semantic paths from its generated contract:
 
@@ -108,11 +119,28 @@ Brick's complete defaults. `foundations` accepts only contract-declared derived
 semantic paths, while `components` accepts only Brick's audited component
 theme inputs.
 
+For example, a revision 3 Brick contract may allow a theme to choose:
+
+```json
+{
+  "components": {
+    "link": { "decoration": "none" }
+  }
+}
+```
+
+The compiler accepts only Brick's closed values. When resting Link decoration
+is removed, it also requires the declared `3:1` distinction between accent
+link text and adjacent primary text in every supported appearance. Individual
+Links may still select an explicit Brick variant.
+
 Brick's contract also declares the foreground/background relationships it
 promises to maintain. The compiler checks every declared pair in every emitted
 appearance using the WCAG 2 relative-luminance algorithm: normal text requires
-at least 4.5:1 and non-text UI indicators require at least 3:1. The raw ratio is
-compared without rounding and is recorded in `theme.report.json`.
+at least 4.5:1 and non-text UI indicators or text-distinction cues require at
+least 3:1. Conditional pairs run only when their audited theme input is active.
+The raw ratio is compared without rounding and is recorded in
+`theme.report.json`.
 
 Colors used by those declared pairs must resolve to opaque sRGB hex or `rgb()`
 syntax so the build can prove the result. Other valid CSS color syntax remains

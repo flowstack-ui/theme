@@ -18,7 +18,9 @@ npm run check:release
 - `validation` builds the package and runs structural validation tests.
 - `compiler` covers aliases, defaults, atomic families, fixed and dual
   appearances, component inputs, project roles, artifact writes, deterministic
-  output, declared semantic contrast pairs, and failure diagnostics.
+  output, declared semantic contrast pairs, categorical component inputs,
+  conditional contrast activation, appearance-aware project roles, project
+  contrast relationships, and failure diagnostics.
 - `interchange` covers reviewed Colors candidate ingestion, project palette
   preservation, semantic-profile compatibility, complete Brick-family
   expansion, ordinary Theme compilation, and fail-closed diagnostics.

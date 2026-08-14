@@ -36,6 +36,52 @@ campaigns, syntax, editorial colors, maps, and future Block roles remain in
 `roles` or a namespaced `extensions` object and emit as
 `--flowstack-theme-*` variables.
 
+## Appearance-aware project roles
+
+Use `appearanceRoles` when one project meaning must adapt with light and dark
+appearance without becoming a required Brick semantic:
+
+```json
+{
+  "appearanceRoles": {
+    "light": {
+      "blocks": {
+        "expressiveSurface": {
+          "surface": "#4a2f00",
+          "foreground": "#ffffff"
+        }
+      }
+    },
+    "dark": {
+      "blocks": {
+        "expressiveSurface": {
+          "surface": "#2f2108",
+          "foreground": "#ffffff"
+        }
+      }
+    }
+  },
+  "relationships": {
+    "contrast": [
+      {
+        "id": "blocks-expressive-surface-content",
+        "kind": "text",
+        "foreground": "blocks.expressiveSurface.foreground",
+        "background": "blocks.expressiveSurface.surface",
+        "minimumRatio": 4.5
+      }
+    ]
+  }
+}
+```
+
+The compiler emits stable
+`--flowstack-theme-roles-blocks-expressive-surface-*` variables under the
+active appearance selectors. Every logical role must exist in every supported
+appearance. Declared project contrast relationships must resolve to opaque
+sRGB colors and meet the same unrounded WCAG 2 floors used for Brick pairs.
+Keep media-composition and transparency checks in the consuming product.
+
 ## Map Brick semantics
 
 The `brick` section changes stable UI meanings. Map by purpose, not merely by
@@ -71,12 +117,19 @@ keeping unrelated hover, pressed, or foreground values.
 
 ## Other sections
 
-- `foundations` accepts contract-declared typography, radius, density, shadow,
-  and motion paths.
+- `foundations` accepts contract-declared appearance-invariant typography,
+  radius, density, and motion paths. Appearance-dependent semantic shadows are
+  mapped under `brick.light.shadow` and `brick.dark.shadow`.
 - `components` accepts only Brick's audited inherited component inputs. It is
-  not a selector or arbitrary-recipe registry.
+  not a selector or arbitrary-recipe registry. For example,
+  `components.link.decoration` accepts `"underline"` or `"none"`; the latter
+  compiles only when the theme's accent link text remains at least `3:1`
+  distinct from adjacent primary text. A single Link can still override the
+  theme with `variant="underline"` or `variant="plain"`.
 - `requirements` records application work such as font and asset loading.
 - `guidance` records intent and review notes for people and agents.
+- `relationships.contrast` validates explicit foreground/background pairs
+  from `appearanceRoles`; it does not expand Brick's semantic vocabulary.
 
 Aliases must occupy the complete value, for example
 `"{roles.brandPrimary}"`. Unknown aliases, cycles, unsupported values,

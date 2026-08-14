@@ -13,6 +13,8 @@ import {
   type ThemeContrastPairResult,
   type ThemeData,
   type ThemeDefinition,
+  type ThemeProjectContrastPair,
+  type ThemeProjectContrastPairResult,
 } from "./types.js";
 import { assertThemeDefinition } from "./validation.js";
 
@@ -25,6 +27,7 @@ const cssNameSegmentPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const cssCustomPropertyPattern = /^--[_a-z][_a-z0-9-]*$/u;
 const cssLayerPattern = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/u;
 const dataAttributePattern = /^data-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const componentAuthorPathPattern = /^[a-z0-9]+(?:\.[a-z0-9]+)*$/u;
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -98,12 +101,71 @@ function contractIssues(input: unknown): ThemeCompilationIssue[] {
     });
   }
   if (!Array.isArray(input.atomicColorFamilies) || input.atomicColorFamilies.some((family) => !isObject(family) || typeof family.id !== "string" || !Array.isArray(family.tokens))) issues.push(issue("invalid-contract", "$contract.atomicColorFamilies", "Expected named atomic families with token arrays."));
+  const componentInputs = new Map<string, PlainObject>();
+  if (!Array.isArray(input.componentThemeInputs)) {
+    issues.push(issue("invalid-contract", "$contract.componentThemeInputs", "Expected declared component theme inputs."));
+  } else {
+    input.componentThemeInputs.forEach((entry, index) => {
+      if (!isObject(entry) || typeof entry.name !== "string" || !cssCustomPropertyPattern.test(entry.name) || typeof entry.type !== "string" || typeof entry.component !== "string" || typeof entry.fallback !== "string" || typeof entry.supportedRange !== "string") {
+        issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}]`, "Expected a declared component theme input."));
+        return;
+      }
+      if (componentInputs.has(entry.name)) issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].name`, `Duplicate component theme input "${entry.name}".`));
+      componentInputs.set(entry.name, entry);
+      if (entry.allowedValues !== undefined) {
+        if (!Array.isArray(entry.allowedValues) || entry.allowedValues.length === 0 || entry.allowedValues.some((value) => typeof value !== "string" && (typeof value !== "number" || !Number.isFinite(value))) || new Set(entry.allowedValues).size !== entry.allowedValues.length) {
+          issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].allowedValues`, "Expected a non-empty list of unique string or finite-number values."));
+        } else if (!entry.allowedValues.includes(entry.fallback)) {
+          issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].fallback`, "Categorical component input fallback must be one of allowedValues."));
+        }
+      }
+      if (entry.authorPath !== undefined && (typeof entry.authorPath !== "string" || !componentAuthorPathPattern.test(entry.authorPath))) {
+        issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].authorPath`, "Expected a lowercase dot-separated component author path."));
+      }
+      if (entry.valueAssignments !== undefined) {
+        if (!isObject(entry.valueAssignments) || !Array.isArray(entry.allowedValues) || entry.allowedValues.some((value) => typeof value !== "string")) {
+          issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].valueAssignments`, "Policy recipes require string allowedValues and an assignment map."));
+        } else {
+          const expectedKeys = [...entry.allowedValues].sort();
+          const actualKeys = Object.keys(entry.valueAssignments).sort();
+          if (expectedKeys.length !== actualKeys.length || expectedKeys.some((key, keyIndex) => key !== actualKeys[keyIndex])) {
+            issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].valueAssignments`, "Expected one assignment list for every allowed value."));
+          }
+          let expectedOutputs: string[] | undefined;
+          for (const value of entry.allowedValues) {
+            const assignments = entry.valueAssignments[value];
+            if (!Array.isArray(assignments) || assignments.length === 0) {
+              issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].valueAssignments.${value}`, "Expected at least one policy assignment."));
+              continue;
+            }
+            const outputs: string[] = [];
+            assignments.forEach((assignment, assignmentIndex) => {
+              const path = `$contract.componentThemeInputs[${index}].valueAssignments.${value}[${assignmentIndex}]`;
+              if (!isObject(assignment) || typeof assignment.name !== "string" || !cssCustomPropertyPattern.test(assignment.name) || typeof assignment.type !== "string" || (typeof assignment.value !== "string" && (typeof assignment.value !== "number" || !Number.isFinite(assignment.value)))) {
+                issues.push(issue("invalid-contract", path, "Expected a named, typed CSS custom-property assignment."));
+                return;
+              }
+              outputs.push(assignment.name);
+              if (!tokenNames.has(assignment.name)) issues.push(issue("invalid-contract", `${path}.name`, `Unknown policy output token "${assignment.name}".`));
+              if (!validCssValue(assignment.type, assignment.value)) issues.push(issue("invalid-contract", `${path}.value`, `Invalid ${assignment.type} policy value.`));
+            });
+            outputs.sort();
+            if (new Set(outputs).size !== outputs.length) issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].valueAssignments.${value}`, "Policy outputs must be unique."));
+            if (expectedOutputs === undefined) expectedOutputs = outputs;
+            else if (expectedOutputs.length !== outputs.length || expectedOutputs.some((output, outputIndex) => output !== outputs[outputIndex])) {
+              issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].valueAssignments.${value}`, "Every policy value must assign the same output tokens."));
+            }
+          }
+        }
+      }
+    });
+  }
   if (!isObject(input.contrast) || input.contrast.algorithm !== "wcag2-relative-luminance" || input.contrast.colorSpace !== "srgb" || !Array.isArray(input.contrast.pairs)) {
     issues.push(issue("invalid-contract", "$contract.contrast", "Expected the sRGB WCAG 2 contrast contract."));
   } else {
     const pairIds = new Set<string>();
     input.contrast.pairs.forEach((pair, index) => {
-      if (!isObject(pair) || typeof pair.id !== "string" || (pair.kind !== "text" && pair.kind !== "non-text") || typeof pair.foreground !== "string" || typeof pair.background !== "string" || typeof pair.minimumRatio !== "number" || !Number.isFinite(pair.minimumRatio) || pair.minimumRatio < 1 || pair.minimumRatio > 21) {
+      if (!isObject(pair) || typeof pair.id !== "string" || !new Set(["text", "text-distinction", "non-text"]).has(String(pair.kind)) || typeof pair.foreground !== "string" || typeof pair.background !== "string" || typeof pair.minimumRatio !== "number" || !Number.isFinite(pair.minimumRatio) || pair.minimumRatio < 1 || pair.minimumRatio > 21) {
         issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}]`, "Expected a named text or non-text contrast pair with a ratio from 1 through 21."));
         return;
       }
@@ -113,9 +175,19 @@ function contractIssues(input: unknown): ThemeCompilationIssue[] {
       if (!requiredColorTokenNames.has(pair.background)) issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].background`, `Expected a required semantic color token; received "${pair.background}".`));
       if (pair.kind === "text" && pair.minimumRatio < 4.5) issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].minimumRatio`, "Normal text pairs must require at least 4.5:1."));
       if (pair.kind === "non-text" && pair.minimumRatio < 3) issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].minimumRatio`, "Non-text pairs must require at least 3:1."));
+      if (pair.kind === "text-distinction" && pair.minimumRatio < 3) issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].minimumRatio`, "Text-distinction pairs must require at least 3:1."));
+      if (pair.when !== undefined) {
+        if (!isObject(pair.when) || typeof pair.when.componentInput !== "string" || (typeof pair.when.equals !== "string" && (typeof pair.when.equals !== "number" || !Number.isFinite(pair.when.equals)))) {
+          issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].when`, "Expected a component-input equality condition."));
+        } else {
+          const componentInput = componentInputs.get(pair.when.componentInput);
+          if (!componentInput || !Array.isArray(componentInput.allowedValues) || !componentInput.allowedValues.includes(pair.when.equals)) {
+            issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].when`, "Contrast condition must reference an allowed categorical component-input value."));
+          }
+        }
+      }
     });
   }
-  if (!Array.isArray(input.componentThemeInputs) || input.componentThemeInputs.some((entry) => !isObject(entry) || typeof entry.name !== "string" || !cssCustomPropertyPattern.test(entry.name) || typeof entry.type !== "string" || typeof entry.component !== "string" || typeof entry.fallback !== "string" || typeof entry.supportedRange !== "string")) issues.push(issue("invalid-contract", "$contract.componentThemeInputs", "Expected declared component theme inputs."));
   return issues;
 }
 
@@ -220,6 +292,7 @@ function validCssValue(type: string, value: string | number): boolean {
   if (typeof value === "number") return type === "number" || type === "fontWeight";
   const trimmed = value.trim();
   if (trimmed.length === 0 || /[;{}]/u.test(trimmed)) return false;
+  if (new Set(["inherit", "initial", "revert", "revert-layer", "unset"]).has(trimmed)) return true;
   switch (type) {
     case "number": return /^-?(?:\d+|\d*\.\d+)$/u.test(trimmed) || /^(?:calc|min|max|clamp)\(/u.test(trimmed);
     case "fontWeight": return /^(?:[1-9]00|normal|bold|bolder|lighter|var\(.+\))$/u.test(trimmed);
@@ -231,10 +304,11 @@ function validCssValue(type: string, value: string | number): boolean {
   }
 }
 
-function validComponentValue(type: string, supportedRange: string, value: string | number): boolean {
-  if (!validCssValue(type, value)) return false;
-  if (supportedRange.toLowerCase().includes("non-negative") && typeof value === "string" && /^-\d/u.test(value.trim())) return false;
-  if (supportedRange.toLowerCase().includes("non-negative") && typeof value === "number" && value < 0) return false;
+function validComponentValue(input: BrickThemeContract["componentThemeInputs"][number], value: string | number): boolean {
+  if (!validCssValue(input.type, value)) return false;
+  if (input.allowedValues && !input.allowedValues.includes(value)) return false;
+  if (input.supportedRange.toLowerCase().includes("non-negative") && typeof value === "string" && /^-\d/u.test(value.trim())) return false;
+  if (input.supportedRange.toLowerCase().includes("non-negative") && typeof value === "number" && value < 0) return false;
   return true;
 }
 
@@ -376,6 +450,9 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
   for (const section of ["palettes", "roles", "brick", "foundations", "components", "extensions"] as const) {
     if (definition[section]) flatten(definition[section], section, authorValues, issues);
   }
+  if (definition.appearanceRoles) {
+    flatten(definition.appearanceRoles, "appearanceRoles", authorValues, issues);
+  }
   const resolved = resolveAliases(authorValues, issues);
   const consumed = new Set<string>();
   const requiredTokens = contract.tokens.filter((token) => token.classification === "required");
@@ -452,15 +529,29 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
   }
 
   let componentCount = 0;
+  const componentValues = new Map<string, string | number>();
   for (const input of contract.componentThemeInputs) {
     const suffix = input.name.startsWith(contract.css.variablePrefix) ? input.name.slice(contract.css.variablePrefix.length) : input.name.replace(/^--/u, "");
-    const authorPath = `components.${suffix.replace(/-/gu, ".")}`;
+    const authorPath = `components.${input.authorPath ?? suffix.replace(/-/gu, ".")}`;
     const value = resolved.get(authorPath);
+    componentValues.set(input.name, value ?? input.fallback);
     if (value === undefined) continue;
     consumed.add(authorPath);
     componentCount += 1;
-    if (!validComponentValue(input.type, input.supportedRange, value)) issues.push(issue("invalid-token-value", `$.${authorPath}`, `Expected ${input.supportedRange}.`));
+    if (!validComponentValue(input, value)) issues.push(issue("invalid-token-value", `$.${authorPath}`, `Expected ${input.supportedRange}.`));
     invariantTokens.push({ name: input.name, path: authorPath, type: input.type, value, source: "theme" });
+    const assignments = input.valueAssignments?.[String(value)];
+    if (assignments) {
+      for (const assignment of assignments) {
+        invariantTokens.push({
+          name: assignment.name,
+          path: authorPath,
+          type: assignment.type,
+          value: assignment.value,
+          source: "theme",
+        });
+      }
+    }
   }
 
   const contrastResults: ThemeContrastPairResult[] = [];
@@ -468,6 +559,7 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
   for (const appearance of definition.appearances.supported) {
     const tokensByName = new Map(appearanceTokens[appearance].map((token) => [token.name, token]));
     for (const pair of contract.contrast.pairs) {
+      if (pair.when && componentValues.get(pair.when.componentInput) !== pair.when.equals) continue;
       const foregroundToken = tokensByName.get(pair.foreground);
       const backgroundToken = tokensByName.get(pair.background);
       if (!foregroundToken || !backgroundToken) {
@@ -519,6 +611,109 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
   }
   invariantTokens.push(...projectTokens);
 
+  const appearanceRoleTokens: Record<ThemeAppearance, CompiledThemeToken[]> = { light: [], dark: [] };
+  const appearanceRolePaths = new Set<string>();
+  for (const path of resolved.keys()) {
+    const match = /^appearanceRoles\.(light|dark)\.(.+)$/u.exec(path);
+    if (match) appearanceRolePaths.add(match[2]);
+  }
+  for (const appearance of ["light", "dark"] as const) {
+    const hasAppearanceValues = [...resolved.keys()].some((path) => path.startsWith(`appearanceRoles.${appearance}.`));
+    if (hasAppearanceValues && !definition.appearances.supported.includes(appearance)) {
+      issues.push(issue("unsupported-appearance", `$.appearanceRoles.${appearance}`, `The "${appearance}" role map is not listed in appearances.supported.`));
+    }
+  }
+  for (const logicalPath of [...appearanceRolePaths].sort(compareText)) {
+    const cssPath = cssSegment(`roles.${logicalPath}`, issues);
+    if (!cssPath) continue;
+    const name = `--flowstack-theme-${cssPath}`;
+    const invariantPath = cssNames.get(name);
+    if (invariantPath) {
+      issues.push(issue("naming-collision", `$.appearanceRoles`, `Appearance role "${logicalPath}" and "${invariantPath}" both compile to ${name}.`));
+      continue;
+    }
+    cssNames.set(name, `appearanceRoles.${logicalPath}`);
+    for (const appearance of definition.appearances.supported) {
+      const path = `appearanceRoles.${appearance}.${logicalPath}`;
+      const value = resolved.get(path);
+      if (value === undefined) {
+        issues.push(issue("missing-appearance-role", `$.${path}`, `Appearance role "${logicalPath}" must define every supported appearance.`));
+        continue;
+      }
+      consumed.add(path);
+      if (typeof value === "string" && (value.trim().length === 0 || /[;{}]/u.test(value))) {
+        issues.push(issue("invalid-token-value", `$.${path}`, "Appearance role values must be safe, non-empty CSS values."));
+      }
+      appearanceRoleTokens[appearance].push({
+        name,
+        path,
+        type: typeof value === "number" ? "number" : "string",
+        appearance,
+        value,
+        source: "theme",
+      });
+    }
+  }
+  for (const appearance of definition.appearances.supported) {
+    appearanceTokens[appearance].push(...appearanceRoleTokens[appearance]);
+  }
+
+  const projectContrastResults: ThemeProjectContrastPairResult[] = [];
+  const projectPairIds = new Set<string>();
+  for (const [pairIndex, pair] of (definition.relationships?.contrast ?? []).entries()) {
+    const pairPath = `$.relationships.contrast[${pairIndex}]`;
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(pair.id)) {
+      issues.push(issue("invalid-project-relationship", `${pairPath}.id`, "Use a lowercase kebab-case relationship id."));
+    }
+    if (projectPairIds.has(pair.id)) {
+      issues.push(issue("invalid-project-relationship", `${pairPath}.id`, `Duplicate project contrast relationship "${pair.id}".`));
+    }
+    projectPairIds.add(pair.id);
+    if (!new Set(["text", "text-distinction", "non-text"]).has(pair.kind)) {
+      issues.push(issue("invalid-project-relationship", `${pairPath}.kind`, "Expected text, text-distinction, or non-text."));
+    }
+    if (!Number.isFinite(pair.minimumRatio) || pair.minimumRatio < 1 || pair.minimumRatio > 21) {
+      issues.push(issue("invalid-project-relationship", `${pairPath}.minimumRatio`, "Expected a ratio from 1 through 21."));
+    } else if (pair.kind === "text" && pair.minimumRatio < 4.5) {
+      issues.push(issue("invalid-project-relationship", `${pairPath}.minimumRatio`, "Normal text pairs must require at least 4.5:1."));
+    } else if ((pair.kind === "non-text" || pair.kind === "text-distinction") && pair.minimumRatio < 3) {
+      issues.push(issue("invalid-project-relationship", `${pairPath}.minimumRatio`, "Non-text and text-distinction pairs must require at least 3:1."));
+    }
+    for (const appearance of definition.appearances.supported) {
+      const foregroundPath = `appearanceRoles.${appearance}.${pair.foreground}`;
+      const backgroundPath = `appearanceRoles.${appearance}.${pair.background}`;
+      const foregroundValue = resolved.get(foregroundPath);
+      const backgroundValue = resolved.get(backgroundPath);
+      if (foregroundValue === undefined || backgroundValue === undefined) {
+        const missing = foregroundValue === undefined ? pair.foreground : pair.background;
+        issues.push(issue("invalid-project-relationship", `${pairPath}.${foregroundValue === undefined ? "foreground" : "background"}`, `Unknown ${appearance} appearance role "${missing}".`));
+        continue;
+      }
+      const foreground = parseOpaqueSrgb(foregroundValue);
+      const background = parseOpaqueSrgb(backgroundValue);
+      if (!foreground) {
+        issues.push(issue("unverifiable-contrast", `$.${foregroundPath}`, `Project contrast roles must resolve to an opaque sRGB hex or rgb() color; received "${String(foregroundValue)}".`));
+      }
+      if (!background) {
+        issues.push(issue("unverifiable-contrast", `$.${backgroundPath}`, `Project contrast roles must resolve to an opaque sRGB hex or rgb() color; received "${String(backgroundValue)}".`));
+      }
+      if (!foreground || !background) continue;
+      const ratio = contrastRatio(foreground, background);
+      if (ratio < pair.minimumRatio) {
+        issues.push(issue("insufficient-contrast", `$projectContrast.${appearance}.${pair.id}`, `${pair.foreground} against ${pair.background} has ${ratio.toPrecision(6)}:1 contrast; ${pair.minimumRatio}:1 is required.`));
+        continue;
+      }
+      projectContrastResults.push({
+        ...(pair as ThemeProjectContrastPair),
+        appearance,
+        foregroundValue: String(foregroundValue),
+        backgroundValue: String(backgroundValue),
+        ratio,
+        valid: true,
+      });
+    }
+  }
+
   for (const path of [...authorValues.keys()].sort()) {
     if (consumed.has(path) || !resolved.has(path)) continue;
     if (path.startsWith("brick.")) issues.push(issue("unknown-token", `$.${path}`, "This is not a required Brick semantic token."));
@@ -551,11 +746,12 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
     valid: true,
     themeId: definition.metadata.id,
     brickVersion: contract.package.version,
-    counts: { emitted: allTokens.length, brickRequired: requiredTokens.length * definition.appearances.supported.length, brickInherited: inherited, brickOverridden: overridden, foundations: foundationCount, componentInputs: componentCount, contrastPairs: contrastResults.length, projectTokens: projectTokens.length },
+    counts: { emitted: allTokens.length, brickRequired: requiredTokens.length * definition.appearances.supported.length, brickInherited: inherited, brickOverridden: overridden, foundations: foundationCount, componentInputs: componentCount, contrastPairs: contrastResults.length + projectContrastResults.length, brickContrastPairs: contrastResults.length, projectContrastPairs: projectContrastResults.length, projectTokens: projectTokens.length + definition.appearances.supported.reduce((total, appearance) => total + appearanceRoleTokens[appearance].length, 0) },
     contrast: {
       algorithm: contract.contrast.algorithm,
       colorSpace: contract.contrast.colorSpace,
       pairs: contrastResults,
+      projectPairs: projectContrastResults,
     },
     warnings: [] as readonly string[],
   } as const;

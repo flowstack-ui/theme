@@ -18,9 +18,12 @@ meaning or moving application runtime ownership into Theme.
    namespaced extensions.
 5. Override a complete atomic Brick family or inherit that entire family from
    Brick defaults.
-6. Compile at build time, review the contrast report and static artifacts, and
+6. Use only Brick-declared component theme inputs. Treat their closed values as
+   project-wide policy while leaving Brick props available for local
+   exceptions.
+7. Compile at build time, review the contrast report and static artifacts, and
    ship the CSS rather than the compiler.
-7. Let the application own activation, saved preference, fonts, assets,
+8. Let the application own activation, saved preference, fonts, assets,
    portals, and first-paint behavior.
 
 ## Rules
@@ -41,7 +44,8 @@ meaning or moving application runtime ownership into Theme.
   portals with the application.
 - **MUST:** Do not treat breakpoints as theme values that reconfigure Brick's
   precompiled media queries.
-- **SHOULD:** Use only contract-audited global component inputs.
+- **SHOULD:** Use only contract-audited global component inputs, honor their
+  closed values and conditional validation, and keep local exceptions local.
 
 ## Ownership
 
@@ -59,6 +63,8 @@ meaning or moving application runtime ownership into Theme.
   report identify the intended families and semantic jobs.
 - Compile against the exact installed Brick contract and review every
   diagnostic.
+- When a categorical component input activates conditional validation, confirm
+  every resulting pair passes in every supported appearance.
 - Confirm the report contains a passing result for every declared pair and
   supported appearance.
 - Confirm generated artifacts are byte-stable.

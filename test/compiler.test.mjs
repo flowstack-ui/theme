@@ -26,7 +26,7 @@ function token(name, classification, type, light, dark, path, appearance = "ligh
 function contract() {
   return {
     $schema: BRICK_THEME_CONTRACT_SCHEMA,
-    contractVersion: 2,
+    contractVersion: 4,
     package: { name: "@flowstack-ui/brick", version: "0.1.6" },
     css: {
       variablePrefix: "--brick-",
@@ -40,19 +40,52 @@ function contract() {
     contrast: {
       algorithm: "wcag2-relative-luminance",
       colorSpace: "srgb",
-      pairs: [{
-        id: "accent-on-solid/accent-solid",
-        kind: "text",
-        foreground: "--brick-color-accent-on-solid",
-        background: "--brick-color-accent-solid",
-        minimumRatio: 4.5,
-      }],
+      pairs: [
+        {
+          id: "accent-on-solid/accent-solid",
+          kind: "text",
+          foreground: "--brick-color-accent-on-solid",
+          background: "--brick-color-accent-solid",
+          minimumRatio: 4.5,
+        },
+        {
+          id: "accent-link-from-primary-text/text-primary",
+          kind: "text-distinction",
+          foreground: "--brick-color-accent-on-solid",
+          background: "--brick-color-accent-solid",
+          minimumRatio: 3,
+          when: { componentInput: "--brick-link-decoration-policy", equals: "interaction" },
+        },
+      ],
     },
-    componentThemeInputs: [{ name: "--brick-drawer-radius", type: "dimension", fallback: "--brick-radius-overlay", supportedRange: "non-negative CSS <length>", component: "drawer" }],
+    componentThemeInputs: [
+      { name: "--brick-drawer-radius", type: "dimension", fallback: "--brick-radius-overlay", supportedRange: "non-negative CSS <length>", component: "drawer" },
+      {
+        name: "--brick-link-decoration-policy",
+        type: "string",
+        fallback: "always",
+        supportedRange: '"always" or "interaction"',
+        allowedValues: ["always", "interaction"],
+        authorPath: "link.decoration",
+        valueAssignments: {
+          always: [
+            { name: "--brick-link-decoration", type: "string", value: "underline" },
+            { name: "--brick-link-theme-font-weight", type: "fontWeight", value: "inherit" },
+          ],
+          interaction: [
+            { name: "--brick-link-decoration", type: "string", value: "none" },
+            { name: "--brick-link-theme-font-weight", type: "fontWeight", value: "var(--brick-font-weight-medium)" },
+          ],
+        },
+        component: "link",
+      },
+    ],
     tokens: [
       token("--brick-color-accent-solid", "required", "color", "#554fd8", "#7772ee", "color.accent.solid"),
       token("--brick-color-accent-on-solid", "required", "color", "#ffffff", "#111111", "color.accent.on-solid"),
       token("--brick-radius-overlay", "derived", "dimension", "0.75rem", "0.75rem", "radius.overlay", "invariant"),
+      { name: "--brick-link-decoration", classification: "optional-extension", type: null, appearance: "invariant", component: "link" },
+      { name: "--brick-link-theme-font-weight", classification: "internal", type: null, appearance: "invariant", component: "link" },
       {
         ...token("--brick-color-accent-legacy", "deprecated", "color", "#554fd8", "#7772ee", "color.accent.legacy"),
         deprecated: {
@@ -173,6 +206,11 @@ test("partial atomic families, unknown inputs, invalid values, aliases, and vers
   negative.components.drawer.radius = "-1rem";
   assert.throws(() => compileTheme(negative, contract()), (error) => error.issues.some(({ code }) => code === "invalid-token-value"));
 
+  const categorical = definition();
+  categorical.components.link = { decoration: "sometimes" };
+  assert.throws(() => compileTheme(categorical, contract()), (error) =>
+    error.issues.some(({ code, path }) => code === "invalid-token-value" && path === "$.components.link.decoration"));
+
   const circular = definition();
   circular.roles.a = "{roles.b}";
   circular.roles.b = "{roles.a}";
@@ -183,10 +221,126 @@ test("partial atomic families, unknown inputs, invalid values, aliases, and vers
   assert.throws(() => compileTheme(incompatible, contract()), (error) => error.issues.some(({ code }) => code === "incompatible-brick"));
 });
 
+test("component policy recipes emit their Brick-owned assignments and activate conditional contrast pairs", () => {
+  const inherited = compileTheme(definition(), contract());
+  assert.equal(inherited.report.counts.contrastPairs, 2);
+  assert.doesNotMatch(inherited.css, /--brick-link-decoration/u);
+
+  const input = definition();
+  input.components.link = { decoration: "interaction" };
+  const result = compileTheme(input, contract());
+  assert.match(result.css, /--brick-link-decoration-policy: interaction/u);
+  assert.match(result.css, /--brick-link-decoration: none/u);
+  assert.match(result.css, /--brick-link-theme-font-weight: var\(--brick-font-weight-medium\)/u);
+  assert.equal(result.report.counts.componentInputs, 2);
+  assert.equal(result.report.counts.contrastPairs, 4);
+  assert.ok(result.report.contrast.pairs.some(({ kind, when }) =>
+    kind === "text-distinction" && when?.componentInput === "--brick-link-decoration-policy"));
+
+  const strictContract = contract();
+  strictContract.contrast.pairs[1].minimumRatio = 10;
+  assert.doesNotThrow(() => compileTheme(definition(), strictContract));
+  assert.throws(() => compileTheme(input, strictContract), (error) =>
+    error instanceof ThemeCompilationError &&
+    error.issues.some(({ code, path }) =>
+      code === "insufficient-contrast" &&
+      path === "$contrast.light.accent-link-from-primary-text/text-primary"));
+});
+
 test("project roles remain project variables and never create Brick color names", () => {
   const result = compileTheme(definition(), contract());
   assert.match(result.css, /--flowstack-theme-roles-promotional/u);
   assert.doesNotMatch(result.css, /--brick-color-promotional/u);
+});
+
+test("appearance roles emit one stable project variable and validated project relationships", () => {
+  const input = definition();
+  input.appearanceRoles = {
+    light: { blocks: { expressiveSurface: { surface: "#4a2f00", foreground: "#ffffff" } } },
+    dark: { blocks: { expressiveSurface: { surface: "#f2bd59", foreground: "#211f1c" } } },
+  };
+  input.relationships = {
+    contrast: [{
+      id: "blocks-expressive-surface-content",
+      kind: "text",
+      foreground: "blocks.expressiveSurface.foreground",
+      background: "blocks.expressiveSurface.surface",
+      minimumRatio: 4.5,
+    }],
+  };
+  const result = compileTheme(input, contract());
+  const variable = "--flowstack-theme-roles-blocks-expressive-surface-surface";
+  assert.equal(result.css.match(new RegExp(variable, "gu"))?.length, 4);
+  assert.match(result.css, new RegExp(`${variable}: #4a2f00`, "u"));
+  assert.match(result.css, new RegExp(`${variable}: #f2bd59`, "u"));
+  assert.equal(result.report.counts.brickContrastPairs, 2);
+  assert.equal(result.report.counts.projectContrastPairs, 2);
+  assert.equal(result.report.counts.contrastPairs, 4);
+  assert.equal(result.report.contrast.projectPairs.length, 2);
+  assert.equal(result.tokens.appearanceRoles.light.blocks.expressiveSurface.surface.$value, "#4a2f00");
+});
+
+test("appearance roles reject missing appearances, collisions, and unsafe project relationships", () => {
+  const missing = definition();
+  missing.appearanceRoles = { light: { panel: { surface: "#111111" } } };
+  assert.throws(() => compileTheme(missing, contract()), (error) =>
+    error instanceof ThemeCompilationError &&
+    error.issues.some(({ code, path }) => code === "missing-appearance-role" && path === "$.appearanceRoles.dark.panel.surface"));
+
+  const collision = definition();
+  collision.roles.panel = { surface: "#111111" };
+  collision.appearanceRoles = {
+    light: { panel: { surface: "#222222" } },
+    dark: { panel: { surface: "#333333" } },
+  };
+  assert.throws(() => compileTheme(collision, contract()), (error) =>
+    error instanceof ThemeCompilationError && error.issues.some(({ code }) => code === "naming-collision"));
+
+  const unsafe = definition();
+  unsafe.appearanceRoles = {
+    light: { panel: { surface: "#777777", foreground: "#888888" } },
+    dark: { panel: { surface: "#777777", foreground: "#888888" } },
+  };
+  unsafe.relationships = { contrast: [{
+    id: "panel-content",
+    kind: "text",
+    foreground: "panel.foreground",
+    background: "panel.surface",
+    minimumRatio: 4.5,
+  }] };
+  assert.throws(() => compileTheme(unsafe, contract()), (error) =>
+    error instanceof ThemeCompilationError &&
+    error.issues.some(({ code, path }) => code === "insufficient-contrast" && path === "$projectContrast.light.panel-content"));
+
+  const unprovable = definition();
+  unprovable.appearanceRoles = {
+    light: { panel: { surface: "color(display-p3 0.2 0.2 0.2)", foreground: "#ffffff" } },
+    dark: { panel: { surface: "#111111", foreground: "#ffffff" } },
+  };
+  unprovable.relationships = unsafe.relationships;
+  assert.throws(() => compileTheme(unprovable, contract()), (error) =>
+    error instanceof ThemeCompilationError &&
+    error.issues.some(({ code, path }) => code === "unverifiable-contrast" && path === "$.appearanceRoles.light.panel.surface"));
+});
+
+test("fixed-appearance themes require and report only their supported project-role map", () => {
+  const input = definition();
+  input.appearances = { supported: ["light"], default: "light" };
+  delete input.brick.dark;
+  input.appearanceRoles = {
+    light: { panel: { surface: "#111111", foreground: "#ffffff" } },
+  };
+  input.relationships = { contrast: [{
+    id: "panel-content",
+    kind: "text",
+    foreground: "panel.foreground",
+    background: "panel.surface",
+    minimumRatio: 4.5,
+  }] };
+  const result = compileTheme(input, contract());
+  assert.equal(result.report.counts.projectContrastPairs, 1);
+  assert.doesNotMatch(result.css, /prefers-color-scheme/u);
+  assert.match(result.css, /--flowstack-theme-roles-panel-surface: #111111/u);
 });
 
 test("contrast validation compares the raw ratio and rejects insufficient pairs", () => {

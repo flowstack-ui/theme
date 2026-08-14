@@ -26,6 +26,8 @@ const interfaceLight = {
   solidHover: "#294cc5",
   solidPressed: "#223fae",
   text: "#111177",
+  textHover: "#0d0d66",
+  textPressed: "#090955",
   onSoft: "#111177",
   onSolid: "#ffffff",
 };
@@ -41,6 +43,8 @@ const interfaceDark = {
   solidHover: "#4166df",
   solidPressed: "#5377e6",
   text: "#ccccff",
+  textHover: "#ddddff",
+  textPressed: "#eeeeff",
   onSoft: "#ccccff",
   onSolid: "#ffffff",
 };
@@ -139,6 +143,11 @@ function contract() {
     ["focus", [
       ["--brick-color-focus-ring", "color.focus-ring", "#0000aa", "#aaaaff"],
     ]],
+    ["link", [
+      ["--brick-color-link-text", "color.link.text", "#111177", "#ccccff"],
+      ["--brick-color-link-text-hover", "color.link.text-hover", "#0d0d66", "#ddddff"],
+      ["--brick-color-link-text-pressed", "color.link.text-pressed", "#090955", "#eeeeff"],
+    ]],
     ["surface", [
       ["--brick-color-surface-base", "color.surface.base", "#fafafa", "#181818"],
       ["--brick-color-surface-canvas", "color.surface.canvas", "#ffffff", "#111111"],
@@ -214,9 +223,10 @@ test("scaffolds reviewed candidate families into an ordinary compilable Theme", 
   const result = scaffoldThemeFromColors(candidate(), mapping(), contract());
   assert.equal(result.report.$schema, COLORS_THEME_SCAFFOLD_REPORT_SCHEMA);
   assert.deepEqual(result.report.counts, {
-    importedValues: 52,
-    mappedBrickTokens: 32,
+    importedValues: 56,
+    mappedBrickTokens: 38,
   });
+  assert.equal(result.report.semantics.link, "brand");
   assert.equal(result.definition.palettes.colors.brand.light.solid, "#3157d5");
   assert.equal(result.definition.palettes.colors.campaign.dark["step-2"], "#ff00ff");
   assert.equal(
@@ -227,10 +237,14 @@ test("scaffolds reviewed candidate families into an ordinary compilable Theme", 
     result.definition.brick.dark.color.text.inverse,
     "{palettes.colors.neutral.dark.textInverse}",
   );
+  assert.equal(
+    result.definition.brick.light.color.link["text-hover"],
+    "{palettes.colors.brand.light.textHover}",
+  );
 
   const compilation = compileTheme(result.definition, contract());
   assert.equal(compilation.report.counts.brickInherited, 0);
-  assert.equal(compilation.report.counts.brickOverridden, 32);
+  assert.equal(compilation.report.counts.brickOverridden, 38);
   assert.equal(compilation.report.contrast.pairs.length, 6);
   assert.ok(compilation.report.contrast.pairs.every(({ valid }) => valid));
   assert.deepEqual(JSON.parse(JSON.stringify(result)), result);

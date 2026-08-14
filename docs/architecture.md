@@ -26,7 +26,10 @@ The compiler receives Brick's generated
 carry a copied token list. Theme `brick.light` and `brick.dark` objects address
 required semantic paths after the contract's `semantic.<appearance>` prefix.
 Compilation requires contract revision 2 or newer so contrast declarations
-cannot be absent silently.
+cannot be absent silently. Revision 3 contracts may additionally declare
+closed `allowedValues` for categorical component inputs and a `when` condition
+on contrast pairs. These fields remain optional so revision 2 contracts stay
+compatible.
 Theme `foundations` addresses derived semantic paths. Theme `components`
 addresses only declared inherited component inputs, for example
 `components.drawer.radius`.
@@ -39,17 +42,32 @@ comparator sets, and `||` alternatives.
 
 Brick also owns a versioned list of maintained semantic contrast pairs. Theme
 evaluates those pairs for every supported appearance with WCAG 2 relative
-luminance in sRGB. Text pairs require at least 4.5:1 and non-text pairs require
-at least 3:1; the unrounded ratio decides success. A participating token must
-resolve to an opaque sRGB hex or `rgb()` value. Compilation fails when a pair
-is insufficient or cannot be proved. This contract deliberately excludes
-disabled presentation and does not claim to model gradients, transparency,
-images, consumer overrides, or the final browser composition.
+luminance in sRGB. Text pairs require at least 4.5:1 and non-text or
+text-distinction pairs require at least 3:1; the unrounded ratio decides
+success. A conditional pair runs only when its declared categorical
+component-input value is active, using either the authored value or Brick
+fallback. A participating token must resolve to an opaque sRGB hex or `rgb()`
+value. Compilation fails when a pair is insufficient or cannot be proved. This
+contract deliberately excludes disabled presentation and does not claim to
+model gradients, transparency, images, consumer overrides, or the final
+browser composition.
 
 Project `palettes`, `roles`, and `extensions` are open vocabularies. They emit
 under `--flowstack-theme-*`, never create new `--brick-*` meanings, and are
 also retained in the token artifact. Extension top-level keys are the
 discoverable namespaces recorded by the manifest.
+
+Project meanings that vary by appearance belong in `appearanceRoles`. Each
+logical path must provide every supported appearance and emits one stable
+`--flowstack-theme-roles-*` variable through the same default, system,
+explicit, and nested appearance selectors used by Brick mappings. An
+appearance role cannot collide with an invariant `roles` path.
+
+Themes may declare contrast relationships between appearance roles. Theme
+evaluates these separately from Brick-owned pairs and records both groups in
+the report. This proves only the resolved opaque foreground and background;
+images, gradients, transparency, and the final browser composition remain
+consumer qualification responsibilities.
 
 ## Colors interchange
 
