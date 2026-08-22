@@ -373,6 +373,10 @@ function contrastRatio(foreground: SrgbColor, background: SrgbColor): number {
     (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
 }
 
+function reportContrastRatio(ratio: number): number {
+  return Number(ratio.toPrecision(12));
+}
+
 function cssSegment(path: string, issues: ThemeCompilationIssue[]): string | undefined {
   const segments = path.split(".").map((part) => part
     .replace(/([a-z0-9])([A-Z])/gu, "$1-$2")
@@ -586,7 +590,7 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
         appearance,
         foregroundValue: String(foregroundToken.value),
         backgroundValue: String(backgroundToken.value),
-        ratio,
+        ratio: reportContrastRatio(ratio),
         valid: true,
       });
     }
@@ -708,7 +712,7 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
         appearance,
         foregroundValue: String(foregroundValue),
         backgroundValue: String(backgroundValue),
-        ratio,
+        ratio: reportContrastRatio(ratio),
         valid: true,
       });
     }

@@ -16,6 +16,14 @@
 - Declarative project contrast relationships with separate deterministic
   reporting from Brick-owned pairs.
 
+### Fixed
+
+- Corrected public Link-decoration authoring examples to use the current
+  `always` and `interaction` contract values rather than emitted CSS values.
+- Stabilized serialized contrast ratios at 12 significant digits while
+  retaining full-precision pass/fail comparison, preventing last-bit runtime
+  differences from invalidating otherwise identical generated reports.
+
 ## 0.1.0 - 2026-08-12
 
 ### Added

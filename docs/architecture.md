@@ -91,8 +91,9 @@ authority for exact Brick compatibility and contrast.
 - `theme.tokens.json` contains resolved DTCG-compatible `$value` leaves.
 - `theme.manifest.json` records identity, compatibility, activation,
   extensions, requirements, and artifact names.
-- `theme.report.json` records deterministic compilation counts, the raw result
-  of every declared contrast pair, and warnings.
+- `theme.report.json` records deterministic compilation counts, every declared
+  contrast result at 12 significant digits, and warnings. Validation compares
+  the unrounded ratio before this serialization boundary.
 
 Fixed-light and fixed-dark definitions emit one complete appearance. Dual
 definitions may select a fixed default or `system`; the latter adds a static

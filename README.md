@@ -124,23 +124,26 @@ For example, a revision 3 Brick contract may allow a theme to choose:
 ```json
 {
   "components": {
-    "link": { "decoration": "none" }
+    "link": { "decoration": "interaction" }
   }
 }
 ```
 
-The compiler accepts only Brick's closed values. When resting Link decoration
-is removed, it also requires the declared `3:1` distinction between accent
-link text and adjacent primary text in every supported appearance. Individual
-Links may still select an explicit Brick variant.
+The authoring values describe intent: `"always"` keeps resting decoration and
+`"interaction"` reveals it on hover, focus, and active interaction. The
+compiler maps those closed values to Brick's CSS output. When resting Link
+decoration is removed, it also requires the declared `3:1` distinction between
+accent link text and adjacent primary text in every supported appearance.
+Individual Links may still select an explicit Brick variant.
 
 Brick's contract also declares the foreground/background relationships it
 promises to maintain. The compiler checks every declared pair in every emitted
 appearance using the WCAG 2 relative-luminance algorithm: normal text requires
 at least 4.5:1 and non-text UI indicators or text-distinction cues require at
 least 3:1. Conditional pairs run only when their audited theme input is active.
-The raw ratio is compared without rounding and is recorded in
-`theme.report.json`.
+The raw ratio is compared without rounding. `theme.report.json` records that
+result at 12 significant digits so artifacts remain byte-stable across
+supported JavaScript runtimes without weakening the pass/fail decision.
 
 Colors used by those declared pairs must resolve to opaque sRGB hex or `rgb()`
 syntax so the build can prove the result. Other valid CSS color syntax remains

@@ -122,10 +122,11 @@ keeping unrelated hover, pressed, or foreground values.
   mapped under `brick.light.shadow` and `brick.dark.shadow`.
 - `components` accepts only Brick's audited inherited component inputs. It is
   not a selector or arbitrary-recipe registry. For example,
-  `components.link.decoration` accepts `"underline"` or `"none"`; the latter
-  compiles only when the theme's accent link text remains at least `3:1`
-  distinct from adjacent primary text. A single Link can still override the
-  theme with `variant="underline"` or `variant="plain"`.
+  `components.link.decoration` accepts the intent values `"always"` or
+  `"interaction"`; the latter emits interaction-only decoration and compiles
+  only when the theme's accent link text remains at least `3:1` distinct from
+  adjacent primary text. A single Link can still override the theme with
+  `variant="underline"` or `variant="plain"`.
 - `requirements` records application work such as font and asset loading.
 - `guidance` records intent and review notes for people and agents.
 - `relationships.contrast` validates explicit foreground/background pairs

@@ -138,6 +138,8 @@ test("compiler resolves aliases and emits complete deterministic dual-appearance
   assert.equal(first.report.contrast.algorithm, "wcag2-relative-luminance");
   assert.equal(first.report.contrast.pairs.length, 2);
   assert.ok(first.report.contrast.pairs.every(({ ratio, valid }) => ratio >= 4.5 && valid));
+  assert.ok(first.report.contrast.pairs.every(({ ratio }) =>
+    Number(ratio.toPrecision(12)) === ratio));
 
   const output = await mkdtemp(resolve(tmpdir(), "flowstack-theme-artifacts-"));
   try {
