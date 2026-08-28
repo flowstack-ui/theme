@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a public capability or contract change.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the user need or limitation before describing an API.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed capability
+      description: Explain the intended behavior, API, and ownership layer.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and accessibility
+      description: Note migration, responsive, accessibility, browser, or package-size implications.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched for an existing request.
+          required: true
+        - label: I have described the problem independently of the proposed solution.
+          required: true
+
