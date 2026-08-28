@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a reproducible problem in the published package.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve FLOWSTACK. Security vulnerabilities belong in a private advisory, not this form.
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: 0.0.0
+    validations:
+      required: true
+  - type: input
+    id: import
+    attributes:
+      label: Component or import path
+      placeholder: "Package root, subpath, component, CLI, or generated artifact"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Link a small repository or provide the shortest complete steps that reproduce the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include relevant React, Node, browser, operating-system, and build-tool versions.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add sanitized logs, screenshots, accessibility details, or regressions from an earlier version.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched for an existing issue.
+          required: true
+        - label: This report contains no secrets or private user data.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+
