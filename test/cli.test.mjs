@@ -50,7 +50,7 @@ test("CLI scaffolds a reviewed Colors candidate into editable Theme JSON", () =>
     writeFileSync(contract, JSON.stringify({
       $schema: "flowstack.brick-theme-contract.v1",
       contractVersion: 2,
-      package: { name: "@flowstack-ui/brick", version: "0.1.10" },
+      package: { name: "@flowstack-ui/brick", version: "0.1.11" },
       css: {
         variablePrefix: "--brick-",
         layerOrder: ["brick.tokens", "flowstack.theme", "brick.foundations"],

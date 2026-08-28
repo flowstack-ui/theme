@@ -71,7 +71,7 @@
     "prepack": "npm run build"
   },
   "devDependencies": {
-    "@flowstack-ui/brick": "0.1.10",
+    "@flowstack-ui/brick": "0.1.11",
     "@types/node": "^22.19.7",
     "typescript": "^5.9.3"
   }

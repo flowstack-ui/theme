@@ -11,7 +11,7 @@
   coverage report route all seven Theme operations, enforce exact Markdown and
   generated-output parity, and traverse the same artifacts and public values
   from the packed installed package.
-- Qualified compilation against the exact installed Brick 0.1.10 contract in
+- Qualified compilation against the exact installed Brick 0.1.11 contract in
   the archive consumer while preserving zero runtime dependencies, serialized
   optional Colors interchange, static artifacts, and compiler-free browser
   delivery.
