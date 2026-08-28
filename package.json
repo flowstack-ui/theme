@@ -1,6 +1,6 @@
 {
   "name": "@flowstack-ui/theme",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Serializable theme authoring and static compilation for Flowstack UI.",
   "type": "module",
   "license": "MIT",
@@ -38,6 +38,7 @@
       "default": "./dist/schema.js"
     },
     "./agents/manifest.json": "./dist/agents/manifest.json",
+    "./agents/coverage.json": "./dist/agents/coverage.json",
     "./agents/*.json": "./dist/agents/*.json",
     "./agents/*.md": "./dist/agents/*.md",
     "./package.json": "./package.json"
@@ -55,6 +56,7 @@
     "build": "npm run clean && tsc -p tsconfig.build.json && npm run agents:build",
     "agents:build": "node scripts/build-agent-knowledge.mjs",
     "agents:check": "node scripts/build-agent-knowledge.mjs --check",
+    "agents:coverage": "npm run agents:check",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test:unit": "npm run build && node --test test/*.test.mjs",
     "test:types": "npm run build && tsc -p test/types/tsconfig.json",
@@ -69,6 +71,7 @@
     "prepack": "npm run build"
   },
   "devDependencies": {
+    "@flowstack-ui/brick": "0.1.10",
     "@types/node": "^22.19.7",
     "typescript": "^5.9.3"
   }

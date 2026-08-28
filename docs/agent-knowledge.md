@@ -14,9 +14,27 @@ The manifest points to:
 - `@flowstack-ui/theme/agents/theme-system.md` for the equivalent readable
   guide.
 
+It also links `@flowstack-ui/theme/agents/coverage.json`. The deterministic
+`flowstack.agent-coverage.v1` report reconciles every public root and schema
+symbol plus the `flowstack-theme` CLI with seven selectable operation owners:
+definition, validation, installed Brick contract compatibility, Colors file
+interchange, compilation, artifact writing, and CLI automation. Release checks
+require all seven operations and every public surface to be classified, routed,
+and failure-free.
+
+`agents/theme-system.json` is the structured authority and its Markdown is
+generated from that file. `npm run agents:build` regenerates the source
+Markdown and complete `dist/agents` directory. `npm run agents:check` rejects
+source/Markdown drift and missing, stale, or extra generated artifacts.
+
 Agents should read this package guide together with Brick's package and
 component Agent Knowledge. Brick teaches component selection and semantic
 consumption; Theme teaches project value mapping and compilation. Neither
 artifact grants an agent permission to invent brand direction. Creative input
 and application product intent remain explicit inputs.
 
+Theme reads the contract belonging to the exact installed Brick build input;
+it does not copy Brick's token inventory or depend on Brick at runtime. Colors
+is an optional reviewed serialized handoff and is likewise not a Theme runtime
+dependency. Applications continue to own activation, persistence, first paint,
+fonts, assets, portals, routes, and delivery of the compiled CSS.

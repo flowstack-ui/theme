@@ -12,7 +12,7 @@ Define any number of raw palettes, then name the roles your product needs:
 {
   "$schema": "flowstack.theme.v1",
   "metadata": { "id": "acme", "name": "Acme" },
-  "compatibility": { "brick": "^0.1.9" },
+  "compatibility": { "brick": "^0.1.10" },
   "appearances": {
     "supported": ["light", "dark"],
     "default": "system"

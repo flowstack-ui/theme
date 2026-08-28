@@ -24,6 +24,7 @@ assert.equal(packageJson.repository.url, "git+https://github.com/flowstack-ui/th
 assert.equal(packageJson.bin["flowstack-theme"], "dist/cli.js");
 assert.equal(packageJson.exports["./schema"].default, "./dist/schema.js");
 assert.equal(packageJson.exports["./agents/manifest.json"], "./dist/agents/manifest.json");
+assert.equal(packageJson.exports["./agents/coverage.json"], "./dist/agents/coverage.json");
 assert.equal(packageJson.scripts.prepare, "npm run build", "exact Git installs must build public artifacts");
 assert.doesNotMatch(joined, /from\s+["'](?:react|@flowstack-ui\/brick|@flowstack-ui\/atom|@flowstack-ui\/colors|@brick-ui\/colors)/u);
 assert.doesNotMatch(joined, /localStorage|document\.|window\.|createContext|use client/u);

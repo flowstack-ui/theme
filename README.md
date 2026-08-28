@@ -23,7 +23,9 @@ The package provides:
 - byte-stable CSS, DTCG token, manifest, and report artifacts;
 - JSON validation, Colors-candidate scaffolding, and compilation CLI commands;
 - package and exact-archive consumer verification; and
-- a zero-runtime-dependency, exact-archive consumer boundary.
+- a zero-runtime-dependency, exact-archive consumer boundary; and
+- complete public Agent Knowledge coverage for seven Theme operation owners,
+  with manifest, coverage, archive, and installed-consumer verification.
 
 Colors generation itself, presets, React providers, runtime scope helpers,
 font loading, and application preference persistence are outside this release.

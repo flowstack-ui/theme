@@ -174,7 +174,7 @@ function contract() {
   return {
     $schema: BRICK_THEME_CONTRACT_SCHEMA,
     contractVersion: 2,
-    package: { name: "@flowstack-ui/brick", version: "0.1.9" },
+    package: { name: "@flowstack-ui/brick", version: "0.1.10" },
     css: {
       variablePrefix: "--brick-",
       layerOrder: ["brick.tokens", "flowstack.theme", "brick.foundations"],
