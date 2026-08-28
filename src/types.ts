@@ -11,6 +11,22 @@ export type JsonValue =
 
 export type ThemeData = Readonly<Record<string, JsonValue>>;
 
+export type ThemeAppearanceRoles = Readonly<
+  Partial<Record<ThemeAppearance, ThemeData>>
+>;
+
+export interface ThemeProjectContrastPair {
+  readonly id: string;
+  readonly kind: BrickContrastKind;
+  readonly foreground: string;
+  readonly background: string;
+  readonly minimumRatio: number;
+}
+
+export interface ThemeRelationships {
+  readonly contrast?: readonly ThemeProjectContrastPair[];
+}
+
 export interface ThemeMetadata {
   readonly id: string;
   readonly name: string;
@@ -33,10 +49,12 @@ export interface ThemeDefinition {
   readonly appearances: ThemeAppearances;
   readonly palettes?: ThemeData;
   readonly roles?: ThemeData;
+  readonly appearanceRoles?: ThemeAppearanceRoles;
   readonly brick?: ThemeData;
   readonly foundations?: ThemeData;
   readonly components?: ThemeData;
   readonly extensions?: ThemeData;
+  readonly relationships?: ThemeRelationships;
   readonly requirements?: ThemeData;
   readonly guidance?: ThemeData;
 }
@@ -99,7 +117,12 @@ export interface BrickAtomicColorFamily {
   readonly tokens: readonly string[];
 }
 
-export type BrickContrastKind = "text" | "non-text";
+export type BrickContrastKind = "text" | "text-distinction" | "non-text";
+
+export interface BrickContrastCondition {
+  readonly componentInput: string;
+  readonly equals: string | number;
+}
 
 export interface BrickContrastPair {
   readonly id: string;
@@ -107,6 +130,7 @@ export interface BrickContrastPair {
   readonly foreground: string;
   readonly background: string;
   readonly minimumRatio: number;
+  readonly when?: BrickContrastCondition;
 }
 
 export interface BrickContrastContract {
@@ -121,6 +145,17 @@ export interface BrickComponentThemeInput {
   readonly fallback: string;
   readonly supportedRange: string;
   readonly component: string;
+  readonly allowedValues?: readonly (string | number)[];
+  readonly authorPath?: string;
+  readonly valueAssignments?: Readonly<
+    Record<string, readonly BrickComponentThemeAssignment[]>
+  >;
+}
+
+export interface BrickComponentThemeAssignment {
+  readonly name: string;
+  readonly type: string;
+  readonly value: string | number;
 }
 
 export interface BrickThemeContract {
@@ -191,17 +226,29 @@ export interface ThemeCompilationReport {
     readonly foundations: number;
     readonly componentInputs: number;
     readonly contrastPairs: number;
+    readonly brickContrastPairs: number;
+    readonly projectContrastPairs: number;
     readonly projectTokens: number;
   };
   readonly contrast: {
     readonly algorithm: BrickContrastContract["algorithm"];
     readonly colorSpace: BrickContrastContract["colorSpace"];
     readonly pairs: readonly ThemeContrastPairResult[];
+    readonly projectPairs: readonly ThemeProjectContrastPairResult[];
   };
   readonly warnings: readonly string[];
 }
 
 export interface ThemeContrastPairResult extends BrickContrastPair {
+  readonly appearance: ThemeAppearance;
+  readonly foregroundValue: string;
+  readonly backgroundValue: string;
+  readonly ratio: number;
+  readonly valid: true;
+}
+
+export interface ThemeProjectContrastPairResult
+  extends ThemeProjectContrastPair {
   readonly appearance: ThemeAppearance;
   readonly foregroundValue: string;
   readonly backgroundValue: string;
@@ -226,6 +273,8 @@ export type ThemeCompilationIssueCode =
   | "invalid-alias"
   | "invalid-contract"
   | "invalid-token-value"
+  | "invalid-project-relationship"
+  | "missing-appearance-role"
   | "naming-collision"
   | "unsupported-appearance"
   | "unsupported-component-input"
@@ -243,6 +292,7 @@ export type ColorsPaletteProfile = "interface" | "neutral" | "decorative";
 export type ColorsThemeSemanticTarget =
   | "neutral"
   | "accent"
+  | "link"
   | "focus"
   | "danger"
   | "info"

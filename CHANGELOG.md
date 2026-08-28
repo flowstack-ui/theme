@@ -2,12 +2,39 @@
 
 ## Unreleased
 
+## 0.1.1 - 2026-08-28
+
 ### Added
+
+- Added an export-led Agent Knowledge catalog for the public root, schema
+  subpath, and `flowstack-theme` CLI. The generated manifest and zero-failure
+  coverage report route all seven Theme operations, enforce exact Markdown and
+  generated-output parity, and traverse the same artifacts and public values
+  from the packed installed package.
+- Qualified compilation against the exact installed Brick 0.1.11 contract in
+  the archive consumer while preserving zero runtime dependencies, serialized
+  optional Colors interchange, static artifacts, and compiler-free browser
+  delivery.
 
 - Zero-dependency file interchange for reviewed Colors candidates.
 - Explicit palette and semantic scaffold mapping with complete installed Brick
   atomic-family expansion.
 - `flowstack-theme scaffold-colors` and deterministic scaffold reports.
+- Contract revision 3 support for closed categorical component inputs.
+- Conditional semantic contrast validation, including text distinction when a
+  theme removes a Link's resting underline.
+- Appearance-aware project roles with stable CSS variables across default,
+  system, explicit, and nested appearances.
+- Declarative project contrast relationships with separate deterministic
+  reporting from Brick-owned pairs.
+
+### Fixed
+
+- Corrected public Link-decoration authoring examples to use the current
+  `always` and `interaction` contract values rather than emitted CSS values.
+- Stabilized serialized contrast ratios at 12 significant digits while
+  retaining full-precision pass/fail comparison, preventing last-bit runtime
+  differences from invalidating otherwise identical generated reports.
 
 ## 0.1.0 - 2026-08-12
 

@@ -5,6 +5,9 @@ import { tmpdir } from "node:os";
 import { basename, resolve } from "node:path";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
+const repositoryPackage = JSON.parse(await readFile(resolve(repositoryRoot, "package.json"), "utf8"));
+const brickVersion = repositoryPackage.devDependencies?.["@flowstack-ui/brick"];
+assert.match(brickVersion ?? "", /^\d+\.\d+\.\d+$/u, "archive qualification requires an exact installed Brick devDependency");
 const temporaryRoot = await mkdtemp(resolve(tmpdir(), "flowstack-theme-package-"));
 const packageDirectory = resolve(temporaryRoot, "package");
 const consumerDirectory = resolve(temporaryRoot, "consumer");
@@ -21,6 +24,24 @@ function run(command, args, cwd, extraEnvironment = {}) {
     throw new Error(`${command} ${args.join(" ")} failed:\n${result.stdout}\n${result.stderr}`);
   }
   return result.stdout;
+}
+
+const brickArchive = process.env.FLOWSTACK_BRICK_ARCHIVE
+  ? resolve(process.env.FLOWSTACK_BRICK_ARCHIVE)
+  : null;
+const atomArchive = process.env.FLOWSTACK_ATOM_ARCHIVE
+  ? resolve(process.env.FLOWSTACK_ATOM_ARCHIVE)
+  : null;
+let brickInstallTargets = [`@flowstack-ui/brick@${brickVersion}`];
+if (brickArchive) {
+  assert.ok(atomArchive, "FLOWSTACK_ATOM_ARCHIVE is required with a local unpublished Brick candidate");
+  const packedBrick = JSON.parse(run("tar", ["-xOf", brickArchive, "package/package.json"], repositoryRoot));
+  const packedAtom = JSON.parse(run("tar", ["-xOf", atomArchive, "package/package.json"], repositoryRoot));
+  assert.equal(packedBrick.name, "@flowstack-ui/brick");
+  assert.equal(packedBrick.version, brickVersion);
+  assert.equal(packedAtom.name, "@flowstack-ui/atom");
+  assert.equal(packedAtom.version, packedBrick.dependencies?.["@flowstack-ui/atom"]);
+  brickInstallTargets = [atomArchive, brickArchive];
 }
 
 try {
@@ -49,6 +70,7 @@ try {
     "package/dist/schema.d.ts",
     "package/dist/schema.js",
     "package/dist/agents/manifest.json",
+    "package/dist/agents/coverage.json",
     "package/dist/agents/theme-system.json",
     "package/dist/agents/theme-system.md",
     "package/docs/agent-knowledge.md",
@@ -65,11 +87,22 @@ try {
   ]) {
     assert.ok(listing.includes(expected), `${expected} is missing from ${basename(archive)}`);
   }
+  assert.deepEqual(
+    listing.filter((path) => path.startsWith("package/dist/agents/")).sort(),
+    [
+      "package/dist/agents/coverage.json",
+      "package/dist/agents/manifest.json",
+      "package/dist/agents/theme-system.json",
+      "package/dist/agents/theme-system.md",
+    ],
+    "packed Agent Knowledge contains missing or unexpected output",
+  );
   assert.equal(listing.some((path) => /package\/(?:src|test|scripts|\.github)\//u.test(path)), false, "private development sources entered the archive");
 
   await mkdir(consumerDirectory, { recursive: true });
   await writeFile(resolve(consumerDirectory, "package.json"), JSON.stringify({ name: "theme-clean-consumer", private: true, type: "module" }, null, 2));
   await writeFile(resolve(consumerDirectory, "index.mjs"), `
+import { readFile, writeFile } from "node:fs/promises";
 import {
   THEME_DEFINITION_SCHEMA,
   BRICK_THEME_CONTRACT_SCHEMA,
@@ -77,8 +110,10 @@ import {
   assertThemeDefinition,
   compileTheme,
   defineTheme,
+  loadBrickThemeContract,
   scaffoldThemeFromColors,
   validateThemeDefinition,
+  writeThemeArtifacts,
 } from "@flowstack-ui/theme";
 import { THEME_DEFINITION_SCHEMA as SCHEMA_ENTRY } from "@flowstack-ui/theme/schema";
 
@@ -140,6 +175,18 @@ assertThemeDefinition(definition);
 if (!validateThemeDefinition(definition).valid) throw new Error("archive definition did not validate");
 const compilation = compileTheme(definition, contract);
 if (!compilation.css.includes("@layer flowstack.theme")) throw new Error("archive compilation failed");
+await writeFile("compiled-theme.css", compilation.css);
+const installedContract = await loadBrickThemeContract("./node_modules/@flowstack-ui/brick/dist/theme-contract.json");
+if (installedContract.package.version !== ${JSON.stringify(brickVersion)}) throw new Error("installed Brick contract version mismatch");
+const installedCompilation = compileTheme(definition, installedContract);
+if (!installedCompilation.css.includes("@layer flowstack.theme")) throw new Error("installed-exact Brick compilation failed");
+await writeThemeArtifacts(installedCompilation, "theme-output-a");
+await writeThemeArtifacts(installedCompilation, "theme-output-b");
+for (const name of ["theme.css", "theme.tokens.json", "theme.manifest.json", "theme.report.json"]) {
+  const first = await readFile("theme-output-a/" + name, "utf8");
+  const second = await readFile("theme-output-b/" + name, "utf8");
+  if (first !== second) throw new Error("installed artifact is not byte-stable: " + name);
+}
 const color = (role, hex) => ({ role, srgb: { hex } });
 const scaffold = scaffoldThemeFromColors({
   $schema: "flowstack.colors-candidate.v1",
@@ -171,7 +218,7 @@ if (compileTheme(scaffold.definition, contract).report.counts.brickOverridden !=
 console.log(definition.metadata.id, compilation.report.counts.brickRequired);
 `);
 
-  run("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund", archive], consumerDirectory);
+  run("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund", archive, ...brickInstallTargets, "esbuild@0.25.10"], consumerDirectory);
   const consumerOutput = run(process.execPath, ["index.mjs"], consumerDirectory).trim();
   assert.equal(consumerOutput, "archive-consumer 2");
   const help = run(process.execPath, [resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/cli.js"), "--help"], consumerDirectory);
@@ -180,10 +227,42 @@ console.log(definition.metadata.id, compilation.report.counts.brickRequired);
 
   const installedPackage = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/package.json"), "utf8"));
   assert.equal(Object.keys(installedPackage.dependencies ?? {}).length, 0);
+  const installedBrick = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/brick/package.json"), "utf8"));
+  assert.equal(installedBrick.version, brickVersion);
   const agentManifest = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/agents/manifest.json"), "utf8"));
+  const agentCoverage = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/agents/coverage.json"), "utf8"));
   assert.equal(agentManifest.package, "@flowstack-ui/theme");
   assert.equal(agentManifest.packageVersion, installedPackage.version);
   assert.deepEqual(agentManifest.guides.map(({ id }) => id), ["theme-system"]);
+  assert.equal(agentManifest.coverage, "./coverage.json");
+  assert.equal(agentCoverage.schema, "flowstack.agent-coverage.v1");
+  assert.equal(agentCoverage.package, installedPackage.name);
+  assert.equal(agentCoverage.packageVersion, installedPackage.version);
+  assert.equal(agentCoverage.profile.kind, "operation-package");
+  assert.equal(agentCoverage.summary.operationOwners, 7);
+  assert.equal(agentCoverage.summary.guidedOperationOwners, 7);
+  assert.equal(agentCoverage.summary.ownerUnits, 7);
+  assert.equal(agentCoverage.summary.guidedOwnerUnits, 7);
+  assert.equal(agentCoverage.summary.classifiedPublicSurfaces, agentCoverage.summary.publicSurfaces);
+  assert.deepEqual(agentCoverage.failures, []);
+  assert.deepEqual(agentManifest.operations.map(({ id }) => id).sort(), agentCoverage.operations.map(({ id }) => id).sort());
+  const installedAgents = (await import("node:fs/promises")).readdir(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/agents"));
+  assert.deepEqual((await installedAgents).sort(), ["coverage.json", "manifest.json", "theme-system.json", "theme-system.md"]);
+  const rootModule = await import(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/index.js"));
+  const schemaModule = await import(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/schema.js"));
+  for (const surface of agentCoverage.surfaces.filter(({ value }) => value)) {
+    if (surface.surface.startsWith(".#")) assert.ok(surface.surface.slice(2) in rootModule, `missing installed root symbol ${surface.surface}`);
+    if (surface.surface.startsWith("./schema#")) assert.ok(surface.surface.slice(9) in schemaModule, `missing installed schema symbol ${surface.surface}`);
+  }
+  const installedGuide = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/agents/theme-system.json"), "utf8"));
+  const installedGuideMarkdown = await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/agents/theme-system.md"), "utf8");
+  assert.equal(installedGuide.id, "theme-system");
+  assert.match(installedGuideMarkdown, /## Selection map/u);
+
+  await writeFile(resolve(consumerDirectory, "browser.js"), 'import "./compiled-theme.css"; import { Button } from "@flowstack-ui/brick/button"; console.log(Button);\n');
+  run(resolve(consumerDirectory, "node_modules/.bin/esbuild"), ["browser.js", "--bundle", "--platform=browser", "--outfile=browser-bundle.js", "--metafile=browser-meta.json"], consumerDirectory);
+  const browserMeta = JSON.parse(await readFile(resolve(consumerDirectory, "browser-meta.json"), "utf8"));
+  assert.equal(Object.keys(browserMeta.inputs).some((path) => path.includes("node_modules/@flowstack-ui/theme/")), false, "Theme compiler entered the browser bundle");
 
   console.log(`Verified ${basename(archive)} and its clean consumer.`);
 } finally {

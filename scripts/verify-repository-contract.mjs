@@ -32,6 +32,8 @@ for (const path of [
   "docs/troubleshooting.md",
   "agents/theme-system.json",
   "agents/theme-system.md",
+  "agents/catalog.json",
+  "scripts/agent-catalog.mjs",
   "scripts/build-agent-knowledge.mjs",
   "src/index.ts",
   "src/schema.ts",

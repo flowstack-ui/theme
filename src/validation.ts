@@ -14,10 +14,12 @@ const topLevelKeys = new Set([
   "appearances",
   "palettes",
   "roles",
+  "appearanceRoles",
   "brick",
   "foundations",
   "components",
   "extensions",
+  "relationships",
   "requirements",
   "guidance",
 ]);
@@ -25,6 +27,15 @@ const topLevelKeys = new Set([
 const metadataKeys = new Set(["id", "name", "description"]);
 const compatibilityKeys = new Set(["brick"]);
 const appearanceKeys = new Set(["supported", "default"]);
+const appearanceRoleKeys = new Set(["light", "dark"]);
+const relationshipKeys = new Set(["contrast"]);
+const contrastPairKeys = new Set([
+  "id",
+  "kind",
+  "foreground",
+  "background",
+  "minimumRatio",
+]);
 const dataSectionKeys = [
   "palettes",
   "roles",
@@ -215,6 +226,52 @@ function validateAppearances(root: Record<string, unknown>, issues: ThemeValidat
   }
 }
 
+function validateAppearanceRoles(root: Record<string, unknown>, issues: ThemeValidationIssue[]): void {
+  const value = root.appearanceRoles;
+  if (value === undefined) return;
+  if (!isPlainObject(value)) {
+    addIssue(issues, "invalid-type", "$.appearanceRoles", "Expected a plain object when provided.");
+    return;
+  }
+  rejectUnknownKeys(value, appearanceRoleKeys, "$.appearanceRoles", issues);
+  for (const appearance of appearanceRoleKeys) {
+    if (value[appearance] !== undefined && !isPlainObject(value[appearance])) {
+      addIssue(issues, "invalid-type", `$.appearanceRoles.${appearance}`, "Expected a plain object when provided.");
+    }
+  }
+}
+
+function validateRelationships(root: Record<string, unknown>, issues: ThemeValidationIssue[]): void {
+  const value = root.relationships;
+  if (value === undefined) return;
+  if (!isPlainObject(value)) {
+    addIssue(issues, "invalid-type", "$.relationships", "Expected a plain object when provided.");
+    return;
+  }
+  rejectUnknownKeys(value, relationshipKeys, "$.relationships", issues);
+  if (value.contrast === undefined) return;
+  if (!Array.isArray(value.contrast)) {
+    addIssue(issues, "invalid-type", "$.relationships.contrast", "Expected an array when provided.");
+    return;
+  }
+  value.contrast.forEach((pair, index) => {
+    const path = `$.relationships.contrast[${index}]`;
+    if (!isPlainObject(pair)) {
+      addIssue(issues, "invalid-type", path, "Expected a plain object contrast relationship.");
+      return;
+    }
+    rejectUnknownKeys(pair, contrastPairKeys, path, issues);
+    for (const key of ["id", "kind", "foreground", "background"] as const) {
+      if (typeof pair[key] !== "string" || pair[key].trim().length === 0) {
+        addIssue(issues, pair[key] === undefined ? "missing-value" : "invalid-type", `${path}.${key}`, "Expected a non-empty string.");
+      }
+    }
+    if (typeof pair.minimumRatio !== "number" || !Number.isFinite(pair.minimumRatio)) {
+      addIssue(issues, pair.minimumRatio === undefined ? "missing-value" : "invalid-type", `${path}.minimumRatio`, "Expected a finite number.");
+    }
+  });
+}
+
 export function validateThemeDefinition(input: unknown): ThemeValidationResult {
   const issues: ThemeValidationIssue[] = [];
   validateJsonValue(input, "$", issues, new Set());
@@ -233,6 +290,8 @@ export function validateThemeDefinition(input: unknown): ThemeValidationResult {
   validateMetadata(input, issues);
   validateCompatibility(input, issues);
   validateAppearances(input, issues);
+  validateAppearanceRoles(input, issues);
+  validateRelationships(input, issues);
 
   for (const key of dataSectionKeys) {
     if (input[key] !== undefined && !isPlainObject(input[key])) {

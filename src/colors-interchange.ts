@@ -56,6 +56,7 @@ const exactHexPattern = /^#[0-9a-f]{6}$/u;
 const semanticTargets = [
   "neutral",
   "accent",
+  "link",
   "focus",
   "danger",
   "info",
@@ -75,6 +76,12 @@ const interfaceRoleByToken = {
   "solid-pressed": "solidPressed",
   surface: "soft",
   text: "text",
+} as const satisfies Readonly<Record<string, string>>;
+
+const linkRoleByToken = {
+  text: "text",
+  "text-hover": "textHover",
+  "text-pressed": "textPressed",
 } as const satisfies Readonly<Record<string, string>>;
 
 const neutralRoleByFamilyAndToken = {
@@ -109,6 +116,10 @@ function neutralRole(family: string, token: string): string | undefined {
       Record<string, Readonly<Record<string, string>>>
     >
   )[family]?.[token];
+}
+
+function linkRole(token: string): string | undefined {
+  return (linkRoleByToken as Readonly<Record<string, string>>)[token];
 }
 
 export class ColorsThemeScaffoldError extends TypeError {
@@ -621,7 +632,7 @@ function mapSemantics(
   appearances: readonly ThemeAppearance[],
 ): number {
   let count = 0;
-  const semantics = request.semantics ?? {};
+  const semantics = resolvedSemanticSelections(request, contract);
   for (const target of semanticTargets) {
     const palette = semantics[target];
     if (!palette) continue;
@@ -648,6 +659,16 @@ function mapSemantics(
         appearances,
         () => "focusRing",
       );
+    } else if (target === "link") {
+      count += mapContractFamily(
+        theme,
+        contract,
+        "link",
+        palette,
+        family,
+        appearances,
+        (tokenPath) => linkRole(lastPathSegment(tokenPath)),
+      );
     } else {
       count += mapContractFamily(
         theme,
@@ -661,6 +682,21 @@ function mapSemantics(
     }
   }
   return count;
+}
+
+function resolvedSemanticSelections(
+  request: ColorsThemeScaffoldRequest,
+  contract: BrickThemeContract,
+): Partial<Record<ColorsThemeSemanticTarget, string>> {
+  const semantics = { ...(request.semantics ?? {}) };
+  if (
+    semantics.link === undefined
+    && semantics.accent !== undefined
+    && contract.atomicColorFamilies.some(({ id }) => id === "link")
+  ) {
+    semantics.link = semantics.accent;
+  }
+  return semantics;
 }
 
 export function scaffoldThemeFromColors(
@@ -775,7 +811,7 @@ export function scaffoldThemeFromColors(
       themeId: definition.metadata.id,
       brickVersion: contract.package.version,
       palettes: reports,
-      semantics: { ...(request.semantics ?? {}) },
+      semantics: resolvedSemanticSelections(request, contract),
       counts: { importedValues, mappedBrickTokens },
       warnings: [],
     },
