@@ -29,6 +29,22 @@ This repository contains the public `@flowstack-ui/theme` package.
 3. [`docs/testing.md`](docs/testing.md)
 4. [`CHANGELOG.md`](CHANGELOG.md)
 
+## FLOWSTACK Agent Workflows
+
+Choose the primary workflow before doing task work. Review-only or diagnostic
+requests use `$flowstack-ui-review`. Package source, schema, compiler API,
+Agent Knowledge, dependency, qualification, or release work uses
+`$flowstack-ui-maintainer`. A supplied application-plan use of Theme routes to
+`$flowstack-ui-compose` in the consuming repository. Other consumer-interface
+implementation routes to `$flowstack-ui-builder` outside this package. The
+more specific route wins; all Theme package changes use Maintainer.
+
+If the matching skill is not discoverable, read its canonical `SKILL.md` from
+an installed or checked-out `flowstack-ui/agent-tools` repository and follow
+that workflow manually. If neither is available, preserve the mapping, resolve
+exact-version package Agent Knowledge directly, and report the missing skill
+instead of substituting remembered guidance.
+
 ## Verification
 
 Use the smallest focused owner while iterating:
