@@ -1,5 +1,7 @@
 import {
   BRICK_THEME_CONTRACT_SCHEMA,
+  BRICK_THEME_CONTRACT_SCHEMA_V2,
+  type BrickValueConstraints,
   THEME_MANIFEST_SCHEMA,
   THEME_REPORT_SCHEMA,
   type BrickContractToken,
@@ -51,11 +53,37 @@ function isObject(value: unknown): value is PlainObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function validConstraints(input: unknown): input is BrickValueConstraints {
+  if (!isObject(input)) return false;
+  if (input.kind === "number") return Object.keys(input).every(key => ["kind", "minimum", "maximum"].includes(key)) && typeof input.minimum === "number" && Number.isFinite(input.minimum) && (input.maximum === undefined || (typeof input.maximum === "number" && Number.isFinite(input.maximum) && input.maximum >= input.minimum));
+  return input.kind === "length" && Object.keys(input).every(key => ["kind", "minimum", "units", "allowUnitlessZero"].includes(key)) && input.minimum === 0 && typeof input.allowUnitlessZero === "boolean" && Array.isArray(input.units) && input.units.length > 0 && new Set(input.units).size === input.units.length && input.units.every(unit => ["px", "rem", "em"].includes(String(unit)));
+}
+
+function constrainedValue(constraints: BrickValueConstraints | undefined, value: string | number): boolean {
+  if (!constraints) return true;
+  if (constraints.kind === "number") {
+    if (typeof value === "string" && !/^(?:-?(?:\d+(?:\.\d+)?|\.\d+))$/.test(value.trim())) return false;
+    const number = Number(value);
+    return Number.isFinite(number) && number >= constraints.minimum && (constraints.maximum === undefined || number <= constraints.maximum);
+  }
+  if (constraints.allowUnitlessZero && (value === 0 || value === "0")) return true;
+  if (typeof value !== "string") return false;
+  const match = /^(\d+(?:\.\d+)?|\.\d+)(px|rem|em)$/.exec(value.trim());
+  return Boolean(match && constraints.units.includes(match[2] as "px" | "rem" | "em") && Number.isFinite(Number(match[1])));
+}
+
+function sameLengthConstraints(left: unknown, right: unknown): boolean {
+  return validConstraints(left) && validConstraints(right) &&
+    left.kind === "length" && right.kind === "length" &&
+    left.allowUnitlessZero === right.allowUnitlessZero &&
+    left.units.length === right.units.length && left.units.every(unit => right.units.includes(unit));
+}
+
 function contractIssues(input: unknown): ThemeCompilationIssue[] {
   if (!isObject(input)) return [issue("invalid-contract", "$contract", "Expected a Brick theme contract object.")];
   const issues: ThemeCompilationIssue[] = [];
   const classifications = new Set(["required", "derived", "component-input", "optional-extension", "internal", "deprecated"]);
-  if (input.$schema !== BRICK_THEME_CONTRACT_SCHEMA) issues.push(issue("invalid-contract", "$contract.$schema", `Expected "${BRICK_THEME_CONTRACT_SCHEMA}".`));
+  if (input.$schema !== BRICK_THEME_CONTRACT_SCHEMA && input.$schema !== BRICK_THEME_CONTRACT_SCHEMA_V2) issues.push(issue("invalid-contract", "$contract.$schema", `Expected "${BRICK_THEME_CONTRACT_SCHEMA}".`));
   if (!Number.isInteger(input.contractVersion) || Number(input.contractVersion) < 2) issues.push(issue("invalid-contract", "$contract.contractVersion", "Theme contrast validation requires Brick theme contract revision 2 or newer."));
   if (!isObject(input.package) || input.package.name !== "@flowstack-ui/brick" || typeof input.package.version !== "string" || !parseVersion(input.package.version)) issues.push(issue("invalid-contract", "$contract.package", "Expected an @flowstack-ui/brick package and semantic version."));
   if (!isObject(input.css) || input.css.variablePrefix !== "--brick-" || typeof input.css.themeLayer !== "string" || !cssLayerPattern.test(input.css.themeLayer) || typeof input.css.themeAttribute !== "string" || !dataAttributePattern.test(input.css.themeAttribute) || typeof input.css.appearanceAttribute !== "string" || !dataAttributePattern.test(input.css.appearanceAttribute) || !Array.isArray(input.css.appearanceValues) || input.css.appearanceValues.some((value) => value !== "light" && value !== "dark")) issues.push(issue("invalid-contract", "$contract.css", "Expected the safe Brick CSS activation contract."));
@@ -148,6 +176,10 @@ function contractIssues(input: unknown): ThemeCompilationIssue[] {
               outputs.push(assignment.name);
               if (!tokenNames.has(assignment.name)) issues.push(issue("invalid-contract", `${path}.name`, `Unknown policy output token "${assignment.name}".`));
               if (!validCssValue(assignment.type, assignment.value)) issues.push(issue("invalid-contract", `${path}.value`, `Invalid ${assignment.type} policy value.`));
+              const target = Array.isArray(input.tokens) ? input.tokens.find((token: unknown) => isObject(token) && token.name === assignment.name) : undefined;
+              if (isObject(target) && validConstraints(target.constraints) && (assignment.type !== target.type || !constrainedValue(target.constraints, assignment.value))) {
+                issues.push(issue("invalid-contract", `${path}.value`, "Policy assignment violates its output token constraints."));
+              }
             });
             outputs.sort();
             if (new Set(outputs).size !== outputs.length) issues.push(issue("invalid-contract", `$contract.componentThemeInputs[${index}].valueAssignments.${value}`, "Policy outputs must be unique."));
@@ -184,6 +216,31 @@ function contractIssues(input: unknown): ThemeCompilationIssue[] {
           if (!componentInput || !Array.isArray(componentInput.allowedValues) || !componentInput.allowedValues.includes(pair.when.equals)) {
             issues.push(issue("invalid-contract", `$contract.contrast.pairs[${index}].when`, "Contrast condition must reference an allowed categorical component-input value."));
           }
+        }
+      }
+    });
+  }
+  for (const [group, entries] of [["tokens", input.tokens], ["componentThemeInputs", input.componentThemeInputs]] as const) {
+    if (!Array.isArray(entries)) continue;
+    entries.forEach((entry: unknown, index: number) => {
+      if (!isObject(entry)) return;
+      const path = `$contract.${group}[${index}]`;
+      if (entry.constraints !== undefined) {
+        if (input.$schema !== BRICK_THEME_CONTRACT_SCHEMA_V2 || !validConstraints(entry.constraints)) {
+          issues.push(issue("invalid-contract", `${path}.constraints`, "Expected supported v2 value constraints."));
+          return;
+        }
+        const expectedType = entry.constraints.kind === "number" ? "number" : "dimension";
+        if (entry.type !== expectedType) issues.push(issue("invalid-contract", `${path}.type`, `Constraints require ${expectedType}.`));
+        const defaults = group === "tokens" && isObject(entry.defaults) ? Object.values(entry.defaults) : [entry.fallback];
+        for (const value of defaults) if ((typeof value !== "number" && typeof value !== "string") || !constrainedValue(entry.constraints, value)) issues.push(issue("invalid-contract", path, "Default violates constraints."));
+      }
+      if (entry.namedValues !== undefined) {
+        if (!validConstraints(entry.constraints) || entry.constraints.kind !== "length" || !isObject(entry.namedValues) || Object.keys(entry.namedValues).length === 0) {
+          issues.push(issue("invalid-contract", `${path}.namedValues`, "Named values require constrained lengths."));
+        } else for (const [name, target] of Object.entries(entry.namedValues)) {
+          const token = Array.isArray(input.tokens) ? input.tokens.find((candidate: unknown) => isObject(candidate) && candidate.name === target) : undefined;
+          if (!/^[a-z]+$/.test(name) || !isObject(token) || token.classification !== "derived" || !sameLengthConstraints(token.constraints, entry.constraints)) issues.push(issue("invalid-contract", `${path}.namedValues.${name}`, "Expected a derived length token with identical constraints."));
         }
       }
     });
@@ -305,7 +362,8 @@ function validCssValue(type: string, value: string | number): boolean {
 }
 
 function validComponentValue(input: BrickThemeContract["componentThemeInputs"][number], value: string | number): boolean {
-  if (!validCssValue(input.type, value)) return false;
+  if (input.namedValues && Object.hasOwn(input.namedValues, String(value))) return true;
+  if (!validCssValue(input.type, value) || !constrainedValue(input.constraints, value)) return false;
   if (input.allowedValues && !input.allowedValues.includes(value)) return false;
   if (input.supportedRange.toLowerCase().includes("non-negative") && typeof value === "string" && /^-\d/u.test(value.trim())) return false;
   if (input.supportedRange.toLowerCase().includes("non-negative") && typeof value === "number" && value < 0) return false;
@@ -501,7 +559,7 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
         issues.push(issue("invalid-contract", `$contract.tokens.${token.name}`, "Required tokens need a CSS value type."));
         continue;
       }
-      if (!validCssValue(token.type, value)) issues.push(issue("invalid-token-value", `$.${authorPath}`, `Expected Brick ${token.type} syntax.`));
+      if (!validCssValue(token.type, value) || !constrainedValue(token.constraints, value)) issues.push(issue("invalid-token-value", `$.${authorPath}`, `Expected Brick ${token.type} syntax.`));
       if (authored === undefined) inherited += 1; else { overridden += 1; consumed.add(authorPath); }
       appearanceTokens[appearance].push({ name: token.name, path: authorPath, type: token.type, appearance, value, source: authored === undefined ? "default" : "theme" });
     }
@@ -528,7 +586,7 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
       issues.push(issue("invalid-contract", `$contract.tokens.${token.name}`, "Derived tokens need a CSS value type."));
       continue;
     }
-    if (!validCssValue(token.type, value)) issues.push(issue("invalid-token-value", `$.${authorPath}`, `Expected Brick ${token.type} syntax.`));
+    if (!validCssValue(token.type, value) || !constrainedValue(token.constraints, value)) issues.push(issue("invalid-token-value", `$.${authorPath}`, `Expected Brick ${token.type} syntax.`));
     invariantTokens.push({ name: token.name, path: authorPath, type: token.type, value, source: "theme" });
   }
 
@@ -543,7 +601,7 @@ export function compileTheme(definitionInput: unknown, contractInput: unknown): 
     consumed.add(authorPath);
     componentCount += 1;
     if (!validComponentValue(input, value)) issues.push(issue("invalid-token-value", `$.${authorPath}`, `Expected ${input.supportedRange}.`));
-    invariantTokens.push({ name: input.name, path: authorPath, type: input.type, value, source: "theme" });
+    invariantTokens.push({ name: input.name, path: authorPath, type: input.type, value: input.namedValues?.[String(value)] ? `var(${input.namedValues[String(value)]})` : value, source: "theme" });
     const assignments = input.valueAssignments?.[String(value)];
     if (assignments) {
       for (const assignment of assignments) {

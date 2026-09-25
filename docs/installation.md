@@ -8,8 +8,9 @@ npm install @flowstack-ui/brick
 npm install --save-dev @flowstack-ui/theme
 ```
 
-Theme `0.1` requires a Brick package whose exported theme contract has
-`contractVersion: 2` or newer. Compile a JSON definition against the installed
+Theme `0.2` accepts Brick contract schemas v1 and v2 with `contractVersion: 2`
+or newer. Brick `0.3.0` emits constrained v2 and requires Theme `0.2` or a later
+compatible compiler; Theme `0.1.1` rejects that schema. Compile a JSON definition against the installed
 artifact:
 
 ```bash
@@ -39,4 +40,3 @@ Only the generated CSS is needed in the browser. Keep the compiler in
 For deterministic builds, run compilation in a checked build step and either
 commit the generated artifacts or generate them in CI. Do not mix both models
 without a drift check.
-

@@ -364,3 +364,60 @@ test("contrast validation accepts opaque rgb syntax and rejects colors it cannot
     error instanceof ThemeCompilationError &&
     error.issues.some(({ code, path }) => code === "unverifiable-contrast" && path === "$.brick.light.color.accent.solid"));
 });
+
+
+function constrainedContract() {
+  const result = contract();
+  result.$schema = "flowstack.brick-theme-contract.v2";
+  result.contractVersion = 6;
+  const length = { kind: "length", minimum: 0, units: ["px", "rem", "em"], allowUnitlessZero: true };
+  result.tokens.push({ ...token("--brick-blur-md", "derived", "dimension", "0.75rem", "0.75rem", "blur.md", "invariant"), constraints: length });
+  result.componentThemeInputs.push({ name: "--brick-surface-translucent-opacity", component: "surface", type: "number", fallback: "0.9", authorPath: "surface.translucent.opacity", supportedRange: "0–1", constraints: { kind: "number", minimum: 0, maximum: 1 } });
+  result.componentThemeInputs.push({ name: "--brick-surface-translucent-blur", component: "surface", type: "dimension", fallback: "0.75rem", authorPath: "surface.translucent.blur", supportedRange: "non-negative length", constraints: length, namedValues: { md: "--brick-blur-md" } });
+  return result;
+}
+
+test("v2 surface constraints enforce alpha, blur, aliases and defaults without weakening v1", () => {
+  const source = definition();
+  source.components.surface = { translucent: { opacity: 0.82, blur: "md" } };
+  source.foundations.blur = { md: "18px" };
+  const output = compileTheme(source, constrainedContract());
+  assert.match(output.css, /--brick-blur-md: 18px/);
+  assert.match(output.css, /--brick-surface-translucent-blur: var\(--brick-blur-md\)/);
+  assert.match(output.css, /--brick-surface-translucent-opacity: 0.82/);
+  for (const opacity of [-1, 1.01, "calc(2)"]) {
+    const bad = structuredClone(source); bad.components.surface.translucent.opacity = opacity;
+    assert.throws(() => compileTheme(bad, constrainedContract()), ThemeCompilationError);
+  }
+  for (const blur of ["-1px", "10%", "var(--external)", "calc(2px)"]) {
+    const bad = structuredClone(source); bad.foundations.blur.md = blur;
+    assert.throws(() => compileTheme(bad, constrainedContract()), ThemeCompilationError);
+  }
+  const alias = structuredClone(source); alias.roles.opacity = 2; alias.components.surface.translucent.opacity = "{roles.opacity}";
+  assert.throws(() => compileTheme(alias, constrainedContract()), ThemeCompilationError);
+  for (const change of [
+    c => { c.tokens.at(-1).constraints.kind = "unknown"; },
+    c => { c.tokens.at(-1).defaults.light = "-2px"; },
+    c => { c.componentThemeInputs.at(-2).constraints.maximum = -1; },
+    c => { c.componentThemeInputs.at(-2).fallback = "2"; },
+    c => { c.componentThemeInputs.at(-1).namedValues.md = "--missing"; },
+    c => { c.$schema = BRICK_THEME_CONTRACT_SCHEMA; },
+  ]) {
+    const invalid = constrainedContract(); change(invalid);
+    assert.throws(() => compileTheme(source, invalid), ThemeCompilationError);
+  }
+  assert.doesNotThrow(() => compileTheme(definition(), contract()));
+});
+
+test("v2 policy assignments obey the output token constraints", () => {
+  const candidate = constrainedContract();
+  candidate.componentThemeInputs.push({
+    name: "--brick-blur-policy", component: "surface", type: "string",
+    fallback: "custom", authorPath: "surface.blurpolicy", supportedRange: "custom",
+    allowedValues: ["custom"],
+    valueAssignments: { custom: [{ name: "--brick-blur-md", type: "dimension", value: "-2px" }] },
+  });
+  assert.throws(() => compileTheme(definition(), candidate), ThemeCompilationError);
+  candidate.componentThemeInputs.at(-1).valueAssignments.custom[0].value = "2px";
+  assert.doesNotThrow(() => compileTheme(definition(), candidate));
+});

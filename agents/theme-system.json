@@ -21,44 +21,85 @@
     {
       "intent": "Author a deterministic theme source",
       "use": "defineTheme with the flowstack.theme.v1 schema and JSON-compatible values",
-      "destinations": [{ "kind": "operation", "id": "theme-definition" }]
+      "destinations": [
+        {
+          "kind": "operation",
+          "id": "theme-definition"
+        }
+      ]
     },
     {
       "intent": "Check a theme definition before compatibility work",
       "use": "validateThemeDefinition for diagnostics or assertThemeDefinition for a throwing boundary",
-      "destinations": [{ "kind": "operation", "id": "theme-validation" }]
+      "destinations": [
+        {
+          "kind": "operation",
+          "id": "theme-validation"
+        }
+      ]
     },
     {
       "intent": "Qualify Theme against Brick",
       "use": "load and assert the theme-contract.json belonging to the exact installed Brick version",
-      "destinations": [{ "kind": "operation", "id": "brick-contract-compatibility" }]
+      "destinations": [
+        {
+          "kind": "operation",
+          "id": "brick-contract-compatibility"
+        }
+      ]
     },
     {
       "intent": "Start from generated Colors candidates",
       "use": "the serialized, explicitly reviewed Colors candidate and scaffold mapping handoff",
-      "destinations": [{ "kind": "operation", "id": "colors-interchange" }]
+      "destinations": [
+        {
+          "kind": "operation",
+          "id": "colors-interchange"
+        }
+      ]
     },
     {
       "intent": "Resolve semantic values and prove completeness and contrast",
       "use": "compileTheme against the selected installed Brick contract",
-      "destinations": [{ "kind": "operation", "id": "theme-compilation" }]
+      "destinations": [
+        {
+          "kind": "operation",
+          "id": "theme-compilation"
+        }
+      ]
     },
     {
       "intent": "Produce files for an application build",
       "use": "compileThemeFiles and writeThemeArtifacts for the complete deterministic CSS, token, manifest, and report set",
-      "destinations": [{ "kind": "operation", "id": "theme-artifacts" }]
+      "destinations": [
+        {
+          "kind": "operation",
+          "id": "theme-artifacts"
+        }
+      ]
     },
     {
       "intent": "Validate, scaffold, or compile from automation",
       "use": "the flowstack-theme CLI with explicit JSON, contract, mapping, and output paths",
-      "destinations": [{ "kind": "operation", "id": "theme-cli" }]
+      "destinations": [
+        {
+          "kind": "operation",
+          "id": "theme-cli"
+        }
+      ]
     },
     {
       "intent": "Activate a compiled theme or choose product-specific brand direction",
       "use": "application-owned runtime and authorized project inputs after Theme emits static artifacts",
       "destinations": [
-        { "kind": "native-application", "id": "application-theme-runtime" },
-        { "kind": "native-application", "id": "application-art-direction" }
+        {
+          "kind": "native-application",
+          "id": "application-theme-runtime"
+        },
+        {
+          "kind": "native-application",
+          "id": "application-art-direction"
+        }
       ]
     }
   ],
@@ -122,6 +163,11 @@
       "id": "theme-component-inputs",
       "level": "should",
       "statement": "Use components only for inputs explicitly audited in the Brick contract; honor closed allowed values and their conditional validation, and keep local component token overrides local."
+    },
+    {
+      "id": "constrained-contract",
+      "level": "must",
+      "statement": "Accept v1 contracts with their legacy rules and constrained v2 contracts with machine-enforced number and literal-length bounds. Reject unknown constraints, invalid defaults and out-of-range resolved aliases. Named blur inputs reference constrained foundations. Upgrade the Theme reader before adopting a Brick v2 contract; static opaque contrast checks do not prove translucent backdrop contrast."
     }
   ],
   "ownership": {
@@ -159,13 +205,37 @@
     "Confirm the browser bundle does not contain the Theme compiler."
   ],
   "related": [
-    { "kind": "operation", "id": "theme-definition" },
-    { "kind": "operation", "id": "theme-validation" },
-    { "kind": "operation", "id": "brick-contract-compatibility" },
-    { "kind": "operation", "id": "colors-interchange" },
-    { "kind": "operation", "id": "theme-compilation" },
-    { "kind": "operation", "id": "theme-artifacts" },
-    { "kind": "operation", "id": "theme-cli" },
-    { "kind": "native-application", "id": "application-theme-runtime" }
+    {
+      "kind": "operation",
+      "id": "theme-definition"
+    },
+    {
+      "kind": "operation",
+      "id": "theme-validation"
+    },
+    {
+      "kind": "operation",
+      "id": "brick-contract-compatibility"
+    },
+    {
+      "kind": "operation",
+      "id": "colors-interchange"
+    },
+    {
+      "kind": "operation",
+      "id": "theme-compilation"
+    },
+    {
+      "kind": "operation",
+      "id": "theme-artifacts"
+    },
+    {
+      "kind": "operation",
+      "id": "theme-cli"
+    },
+    {
+      "kind": "native-application",
+      "id": "application-theme-runtime"
+    }
   ]
 }

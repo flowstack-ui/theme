@@ -41,6 +41,7 @@ Author, compile, and integrate a project theme without changing Brick component 
 - **MUST:** Keep theme selection, persistence, pre-paint setup, font and asset loading, and portal-container coordination in the application.
 - **MUST:** Do not add theme breakpoints expecting them to recompile Brick media queries; Brick component breakpoints and application layout policy have separate owners.
 - **SHOULD:** Use components only for inputs explicitly audited in the Brick contract; honor closed allowed values and their conditional validation, and keep local component token overrides local.
+- **MUST:** Accept v1 contracts with their legacy rules and constrained v2 contracts with machine-enforced number and literal-length bounds. Reject unknown constraints, invalid defaults and out-of-range resolved aliases. Named blur inputs reference constrained foundations. Upgrade the Theme reader before adopting a Brick v2 contract; static opaque contrast checks do not prove translucent backdrop contrast.
 
 ## Ownership
 

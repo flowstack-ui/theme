@@ -22,7 +22,7 @@ The package provides:
   relationships for optional product and package meanings outside Brick;
 - byte-stable CSS, DTCG token, manifest, and report artifacts;
 - JSON validation, Colors-candidate scaffolding, and compilation CLI commands;
-- package and exact-archive consumer verification; and
+- package and exact-archive consumer verification;
 - a zero-runtime-dependency, exact-archive consumer boundary; and
 - complete public Agent Knowledge coverage for seven Theme operation owners,
   with manifest, coverage, archive, and installed-consumer verification.
@@ -39,7 +39,9 @@ npm install @flowstack-ui/brick
 npm install --save-dev @flowstack-ui/theme
 ```
 
-Theme 0.1 requires Brick's generated theme contract revision 2 or newer. Keep
+Theme 0.2 accepts legacy v1 and constrained v2 Brick theme contracts, with
+contract revision 2 or newer. Theme 0.1.1 does not support the v2 schema used
+by Brick 0.3.0; upgrade Theme before compiling that contract. Keep
 Theme in build tooling and ship its generated CSS rather than the compiler.
 
 ## Authoring
@@ -60,7 +62,7 @@ export const theme = defineTheme({
     name: "Acme",
   },
   compatibility: {
-    brick: "^0.1.0",
+    brick: "^0.3.0",
   },
   appearances: {
     supported: ["light", "dark"],
@@ -96,7 +98,7 @@ entry can require and report an opaque foreground/background pair without
 creating a new Brick semantic. See [authoring](docs/authoring.md) for the full
 shape.
 
-Theme 0.1 compilation requires Brick theme contract revision 2 or newer. That
+Theme compilation requires Brick theme contract revision 2 or newer. That
 revision supplies the semantic contrast declarations used by the safety gate;
 revision 3 may additionally publish closed categorical component inputs and
 conditional pairs.
