@@ -6,15 +6,15 @@ This repository contains the public `@flowstack-ui/theme` package.
 
 - Keep the package framework-neutral and independent of private FLOWSTACK
   workspace files, applications, brand presets, and customer data.
-- Version 0.1 begins with serializable theme definition and validation. Exact
-  Brick contract resolution and CSS compilation arrive in later approved
-  batches.
+- Own serializable theme definitions, exact Brick contract validation, and
+  deterministic static compilation. Qualify both supported legacy contracts
+  and constrained v2 contracts through their exact package artifacts.
 - Do not add React context, client-side style injection, local storage, font
   loading, routing, component behavior, or application persistence to the core
   package.
-- Do not add a runtime dependency on Brick or Colors. Later compiler work may
-  read an installed Brick contract or optionally use qualified Colors tooling
-  at build time.
+- Do not add a runtime dependency on Brick or Colors. The compiler reads an
+  exact installed Brick contract and may consume qualified serialized Colors
+  candidates at build time; neither becomes application runtime code.
 - Theme definitions must remain JSON-compatible. Functions, callbacks, DOM
   values, class instances, cyclic data, non-finite numbers, and environment-
   dependent output are invalid.
