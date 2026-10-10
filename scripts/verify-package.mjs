@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -32,19 +33,32 @@ const brickArchive = process.env.FLOWSTACK_BRICK_ARCHIVE
 const atomArchive = process.env.FLOWSTACK_ATOM_ARCHIVE
   ? resolve(process.env.FLOWSTACK_ATOM_ARCHIVE)
   : null;
-let brickInstallTargets = [`@flowstack-ui/brick@${brickVersion}`];
-if (brickArchive) {
-  assert.ok(atomArchive, "FLOWSTACK_ATOM_ARCHIVE is required with a local unpublished Brick candidate");
-  const packedBrick = JSON.parse(run("tar", ["-xOf", brickArchive, "package/package.json"], repositoryRoot));
-  const packedAtom = JSON.parse(run("tar", ["-xOf", atomArchive, "package/package.json"], repositoryRoot));
-  assert.equal(packedBrick.name, "@flowstack-ui/brick");
-  assert.equal(packedBrick.version, brickVersion);
-  assert.equal(packedAtom.name, "@flowstack-ui/atom");
-  assert.equal(packedAtom.version, packedBrick.dependencies?.["@flowstack-ui/atom"]);
-  brickInstallTargets = [atomArchive, brickArchive];
-}
-
 try {
+  let qualifiedBrickVersion = brickVersion;
+  let brickInstallTargets = [`@flowstack-ui/brick@${brickVersion}`];
+  if (brickArchive) {
+    assert.ok(atomArchive, "FLOWSTACK_ATOM_ARCHIVE is required with a local unpublished Brick candidate");
+    qualifiedBrickVersion = process.env.FLOWSTACK_BRICK_VERSION ?? brickVersion;
+    assert.match(qualifiedBrickVersion, /^\d+\.\d+\.\d+$/u, "candidate qualification requires an explicit exact Brick version");
+    for (const [path, expected, owner] of [
+      [brickArchive, process.env.FLOWSTACK_BRICK_SHA256, "Brick"],
+      [atomArchive, process.env.FLOWSTACK_ATOM_SHA256, "Atom"],
+    ]) {
+      assert.match(expected ?? "", /^[a-f0-9]{64}$/u, `${owner} candidate requires its SHA-256`);
+      assert.equal(createHash("sha256").update(await readFile(path)).digest("hex"), expected, `${owner} archive digest mismatch`);
+      console.log(`${owner} candidate SHA-256: ${expected}`);
+    }
+    const packedBrick = JSON.parse(run("tar", ["-xOf", brickArchive, "package/package.json"], repositoryRoot));
+    const packedAtom = JSON.parse(run("tar", ["-xOf", atomArchive, "package/package.json"], repositoryRoot));
+    assert.equal(packedBrick.name, "@flowstack-ui/brick");
+    assert.equal(packedBrick.version, qualifiedBrickVersion);
+    assert.equal(packedAtom.name, "@flowstack-ui/atom");
+    assert.equal(packedAtom.version, packedBrick.dependencies?.["@flowstack-ui/atom"]);
+    brickInstallTargets = [atomArchive, brickArchive];
+  } else {
+    assert.equal(process.env.FLOWSTACK_BRICK_VERSION, undefined, "a candidate version requires a Brick archive");
+  }
+
   await mkdir(packageDirectory, { recursive: true });
   const packOutput = run("npm", ["pack", "--json", "--silent", "--pack-destination", packageDirectory], repositoryRoot);
   const jsonStart = packOutput.lastIndexOf("\n[");
@@ -177,11 +191,16 @@ const compilation = compileTheme(definition, contract);
 if (!compilation.css.includes("@layer flowstack.theme")) throw new Error("archive compilation failed");
 await writeFile("compiled-theme.css", compilation.css);
 const installedContract = await loadBrickThemeContract("./node_modules/@flowstack-ui/brick/dist/theme-contract.json");
-if (installedContract.package.version !== ${JSON.stringify(brickVersion)}) throw new Error("installed Brick contract version mismatch");
-const installedCompilation = compileTheme(definition, installedContract);
+if (installedContract.package.version !== ${JSON.stringify(qualifiedBrickVersion)}) throw new Error("installed Brick contract version mismatch");
+const installedDefinition = {
+  ...definition,
+  compatibility: { brick: ${JSON.stringify(qualifiedBrickVersion)} },
+  appearances: { supported: ["light", "dark"], default: "system" },
+};
+const installedCompilation = compileTheme(installedDefinition, installedContract);
 if (!installedCompilation.css.includes("@layer flowstack.theme")) throw new Error("installed-exact Brick compilation failed");
 await writeThemeArtifacts(installedCompilation, "theme-output-a");
-await writeThemeArtifacts(installedCompilation, "theme-output-b");
+await writeThemeArtifacts(compileTheme(installedDefinition, installedContract), "theme-output-b");
 for (const name of ["theme.css", "theme.tokens.json", "theme.manifest.json", "theme.report.json"]) {
   const first = await readFile("theme-output-a/" + name, "utf8");
   const second = await readFile("theme-output-b/" + name, "utf8");
@@ -228,7 +247,7 @@ console.log(definition.metadata.id, compilation.report.counts.brickRequired);
   const installedPackage = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/package.json"), "utf8"));
   assert.equal(Object.keys(installedPackage.dependencies ?? {}).length, 0);
   const installedBrick = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/brick/package.json"), "utf8"));
-  assert.equal(installedBrick.version, brickVersion);
+  assert.equal(installedBrick.version, qualifiedBrickVersion);
   const agentManifest = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/agents/manifest.json"), "utf8"));
   const agentCoverage = JSON.parse(await readFile(resolve(consumerDirectory, "node_modules/@flowstack-ui/theme/dist/agents/coverage.json"), "utf8"));
   assert.equal(agentManifest.package, "@flowstack-ui/theme");
@@ -259,7 +278,7 @@ console.log(definition.metadata.id, compilation.report.counts.brickRequired);
   assert.equal(installedGuide.id, "theme-system");
   assert.match(installedGuideMarkdown, /## Selection map/u);
 
-  await writeFile(resolve(consumerDirectory, "browser.js"), 'import "./compiled-theme.css"; import { Button } from "@flowstack-ui/brick/button"; console.log(Button);\n');
+  await writeFile(resolve(consumerDirectory, "browser.js"), 'import "./theme-output-a/theme.css"; import { Button } from "@flowstack-ui/brick/button"; console.log(Button);\n');
   run(resolve(consumerDirectory, "node_modules/.bin/esbuild"), ["browser.js", "--bundle", "--platform=browser", "--outfile=browser-bundle.js", "--metafile=browser-meta.json"], consumerDirectory);
   const browserMeta = JSON.parse(await readFile(resolve(consumerDirectory, "browser-meta.json"), "utf8"));
   assert.equal(Object.keys(browserMeta.inputs).some((path) => path.includes("node_modules/@flowstack-ui/theme/")), false, "Theme compiler entered the browser bundle");

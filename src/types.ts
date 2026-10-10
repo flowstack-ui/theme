@@ -81,6 +81,12 @@ export interface ThemeValidationResult {
   readonly issues: readonly ThemeValidationIssue[];
 }
 
+export const BRICK_THEME_CONTRACT_SCHEMA_V2 = "flowstack.brick-theme-contract.v2" as const;
+
+export type BrickValueConstraints =
+  | { readonly kind: "number"; readonly minimum: number; readonly maximum?: number }
+  | { readonly kind: "length"; readonly minimum: 0; readonly units: readonly ("px" | "rem" | "em")[]; readonly allowUnitlessZero: boolean };
+
 export const BRICK_THEME_CONTRACT_SCHEMA = "flowstack.brick-theme-contract.v1" as const;
 export const THEME_MANIFEST_SCHEMA = "flowstack.theme-manifest.v1" as const;
 export const THEME_REPORT_SCHEMA = "flowstack.theme-report.v1" as const;
@@ -102,6 +108,7 @@ export interface BrickTokenDeprecation {
 }
 
 export interface BrickContractToken {
+  readonly constraints?: BrickValueConstraints;
   readonly name: string;
   readonly classification: BrickTokenClassification;
   readonly type: string | null;
@@ -140,6 +147,8 @@ export interface BrickContrastContract {
 }
 
 export interface BrickComponentThemeInput {
+  readonly constraints?: BrickValueConstraints;
+  readonly namedValues?: Readonly<Record<string, string>>;
   readonly name: string;
   readonly type: string;
   readonly fallback: string;
@@ -159,7 +168,7 @@ export interface BrickComponentThemeAssignment {
 }
 
 export interface BrickThemeContract {
-  readonly $schema: typeof BRICK_THEME_CONTRACT_SCHEMA;
+  readonly $schema: typeof BRICK_THEME_CONTRACT_SCHEMA | typeof BRICK_THEME_CONTRACT_SCHEMA_V2;
   readonly contractVersion: number;
   readonly package: { readonly name: string; readonly version: string };
   readonly css: {

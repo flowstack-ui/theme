@@ -22,7 +22,7 @@ documented compatibility migration.
 ## Contract mapping
 
 The compiler receives Brick's generated
-`flowstack.brick-theme-contract.v1` as data; it does not import Brick source or
+`flowstack.brick-theme-contract.v1` or `.v2` as data; it does not import Brick source or
 carry a copied token list. Theme `brick.light` and `brick.dark` objects address
 required semantic paths after the contract's `semantic.<appearance>` prefix.
 Compilation requires contract revision 2 or newer so contrast declarations
@@ -115,3 +115,7 @@ without resolving component styles during React rendering.
   package.
 - Colors remains optional build-time tooling after its algorithms qualify.
 - Applications own preference, persistence, fonts, assets, and routes.
+
+## Constrained Brick contract v2
+
+The compiler accepts legacy `flowstack.brick-theme-contract.v1` and constrained `flowstack.brick-theme-contract.v2` contracts. v2 adds inclusive finite-number bounds and non-negative literal-length constraints. Unknown constraint kinds and invalid defaults fail compilation. Named component lengths reference constrained derived foundations. Author `foundations.blur.md` or `components.surface.translucent.opacity`, `.blur`, `.saturation` (also `appbar` and `bottomnavigation`). These defaults tune opt-in Brick recipes, without a runtime provider. Legacy Theme readers reject v2; upgrade the compiler before adopting Brick that emits v2. Opaque contrast validation is unchanged and does not certify arbitrary backdrops.

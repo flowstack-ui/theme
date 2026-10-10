@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add constrained Brick theme-contract v2 support while retaining v1 compatibility.
+  Enforce numeric bounds, literal-length units, resolved aliases, named blur
+  references, policy assignments and contract defaults.
+- Qualify coordinated candidates by exact version and SHA-256 while retaining
+  the independently installed released Brick compatibility baseline.
+
 ## 0.1.1 - 2026-08-28
 
 ### Added

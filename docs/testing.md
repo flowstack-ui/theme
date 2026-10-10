@@ -42,8 +42,13 @@ CSS to prove the Theme compiler stays outside browser delivery.
 
 Before an exact Brick candidate is published, coordinated local qualification
 passes `FLOWSTACK_BRICK_ARCHIVE` and `FLOWSTACK_ATOM_ARCHIVE` to the same gate.
+Also supply `FLOWSTACK_BRICK_SHA256` and `FLOWSTACK_ATOM_SHA256`; both digests
+are checked before either archive is inspected or installed. Set
+`FLOWSTACK_BRICK_VERSION` to the exact candidate version when it differs from
+the released legacy devDependency. Without archives, qualification continues
+to install the exact released devDependency as the legacy compatibility gate.
 The verifier reads both archive manifests, requires the Brick version to equal
-Theme's exact devDependency, requires Atom to equal Brick's exact dependency,
+the selected exact version, requires Atom to equal Brick's exact dependency,
 and installs those archives into the isolated consumer. These variables are
 archive inputs only; no machine path is recorded in package source or output.
 

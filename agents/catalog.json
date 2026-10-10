@@ -42,6 +42,8 @@
 
     { "surface": ".#assertBrickThemeContract", "classification": "operation", "ownerId": "brick-contract-compatibility", "reason": "Asserts a supported installed Brick contract." },
     { "surface": ".#loadBrickThemeContract", "classification": "operation-member", "ownerId": "brick-contract-compatibility", "reason": "Loads the exact contract file selected by the build." },
+    { "surface": ".#BRICK_THEME_CONTRACT_SCHEMA_V2", "classification": "operation-member", "ownerId": "brick-contract-compatibility", "reason": "Identifies constrained Brick contracts." },
+    { "surface": ".#BrickValueConstraints", "classification": "operation-member", "ownerId": "brick-contract-compatibility", "reason": "Defines machine-enforced numeric and length bounds." },
     { "surface": ".#BRICK_THEME_CONTRACT_SCHEMA", "classification": "operation-member", "ownerId": "brick-contract-compatibility", "reason": "Identifies the Brick contract schema." },
     { "surface": ".#BrickAtomicColorFamily", "classification": "operation-member", "ownerId": "brick-contract-compatibility", "reason": "Describes Brick-owned atomic override families." },
     { "surface": ".#BrickComponentThemeAssignment", "classification": "operation-member", "ownerId": "brick-contract-compatibility", "reason": "Describes a contract-approved component assignment." },
